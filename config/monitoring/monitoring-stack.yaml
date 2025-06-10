@@ -1,0 +1,312 @@
+---
+# ServiceMonitor for Prometheus to scrape JIT Bot metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: jit-bot-metrics
+  namespace: jit-system
+  labels:
+    app: jit-bot
+    component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: jit-operator
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+  - port: webhook-metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+
+---
+# ServiceMonitor for JIT Server
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: jit-server-metrics
+  namespace: jit-system
+  labels:
+    app: jit-bot
+    component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: jit-server
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+
+---
+# ConfigMap for Jaeger configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jaeger-config
+  namespace: jit-system
+data:
+  jaeger.yaml: |
+    jaeger:
+      service_name: jit-bot
+      sampler:
+        type: probabilistic
+        param: 0.1
+      reporter:
+        log_spans: false
+        buffer_flush_interval: 1s
+        queue_size: 5000
+        local_agent:
+          reporting_host: jaeger-agent.monitoring.svc.cluster.local
+          reporting_port: 6831
+
+---
+# ConfigMap for OpenTelemetry Collector
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: jit-system
+data:
+  otel-collector.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+      prometheus:
+        config:
+          scrape_configs:
+          - job_name: 'jit-bot'
+            static_configs:
+            - targets: ['jit-operator:8080', 'jit-server:8080']
+
+    processors:
+      batch:
+      resource:
+        attributes:
+        - key: service.name
+          value: jit-bot
+          action: upsert
+      attributes:
+        actions:
+        - key: environment
+          from_attribute: deployment.environment
+          action: upsert
+
+    exporters:
+      jaeger:
+        endpoint: jaeger-collector.monitoring.svc.cluster.local:14250
+        tls:
+          insecure: true
+      prometheus:
+        endpoint: "0.0.0.0:8889"
+      logging:
+        loglevel: info
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [resource, attributes, batch]
+          exporters: [jaeger, logging]
+        metrics:
+          receivers: [otlp, prometheus]
+          processors: [resource, batch]
+          exporters: [prometheus, logging]
+
+---
+# OpenTelemetry Collector Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: jit-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      containers:
+      - name: otel-collector
+        image: otel/opentelemetry-collector-contrib:0.89.0
+        command:
+        - /otelcol-contrib
+        - --config=/etc/otel-collector-config/otel-collector.yaml
+        ports:
+        - containerPort: 4317   # OTLP gRPC
+        - containerPort: 4318   # OTLP HTTP
+        - containerPort: 8889   # Prometheus metrics
+        volumeMounts:
+        - name: otel-collector-config
+          mountPath: /etc/otel-collector-config
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: otel-collector-config
+        configMap:
+          name: otel-collector-config
+
+---
+# OpenTelemetry Collector Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: jit-system
+  labels:
+    app: otel-collector
+spec:
+  selector:
+    app: otel-collector
+  ports:
+  - name: otlp-grpc
+    port: 4317
+    targetPort: 4317
+  - name: otlp-http
+    port: 4318
+    targetPort: 4318
+  - name: metrics
+    port: 8889
+    targetPort: 8889
+
+---
+# Grafana ConfigMap for dashboard provisioning
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  jit-bot-dashboard.json: |
+    # Content from grafana-dashboard.json would go here
+    # This is a placeholder - in real deployment, include the full JSON
+
+---
+# Alert Manager Configuration for JIT Bot alerts
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-jit-bot
+  namespace: monitoring
+data:
+  config.yaml: |
+    global:
+      smtp_smarthost: 'localhost:587'
+      smtp_from: 'alerts@company.com'
+
+    route:
+      group_by: ['alertname', 'component']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 1h
+      receiver: 'jit-bot-alerts'
+      routes:
+      - match:
+          severity: critical
+        receiver: 'critical-alerts'
+      - match:
+          component: security
+        receiver: 'security-alerts'
+
+    receivers:
+    - name: 'jit-bot-alerts'
+      slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#jit-access-alerts'
+        title: 'JIT Bot Alert'
+        text: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+
+    - name: 'critical-alerts'
+      slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#critical-alerts'
+        title: 'CRITICAL: JIT Bot Alert'
+        text: |
+          🚨 CRITICAL ALERT 🚨
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+      email_configs:
+      - to: 'oncall@company.com'
+        subject: 'CRITICAL: JIT Bot Alert'
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+
+    - name: 'security-alerts'
+      slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#security-alerts'
+        title: '🔒 Security Alert: JIT Bot'
+        text: |
+          🔒 SECURITY ALERT 🔒
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+
+---
+# PodMonitor for direct pod monitoring
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: jit-bot-pods
+  namespace: jit-system
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: jit-operator
+  podMetricsEndpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+
+---
+# NetworkPolicy for monitoring traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: jit-bot-monitoring
+  namespace: jit-system
+spec:
+  podSelector:
+    matchLabels:
+      app: jit-operator
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 8080  # Metrics port
+    - protocol: TCP
+      port: 8081  # Health port

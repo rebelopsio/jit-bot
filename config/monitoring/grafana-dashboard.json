@@ -1,0 +1,350 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "JIT Bot - Just-In-Time Access Monitoring",
+    "tags": ["jit-bot", "security", "access-management"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "title": "Overview",
+        "type": "row",
+        "collapsed": false,
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0}
+      },
+      {
+        "title": "Active Access Sessions",
+        "type": "singlestat",
+        "targets": [
+          {
+            "expr": "sum(jit_active_access_sessions)",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 1},
+        "valueName": "current",
+        "colorBackground": true,
+        "thresholds": "50,100",
+        "colors": ["rgba(50, 172, 45, 0.97)", "rgba(237, 129, 40, 0.89)", "rgba(245, 54, 54, 0.9)"]
+      },
+      {
+        "title": "Requests Today",
+        "type": "singlestat",
+        "targets": [
+          {
+            "expr": "increase(jit_access_requests_total[24h])",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 1},
+        "valueName": "current"
+      },
+      {
+        "title": "Approval Rate (24h)",
+        "type": "singlestat",
+        "targets": [
+          {
+            "expr": "jit:access_approval_rate_1h",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 1},
+        "valueName": "current",
+        "format": "percentunit",
+        "colorBackground": true,
+        "thresholds": "0.7,0.9",
+        "colors": ["rgba(245, 54, 54, 0.9)", "rgba(237, 129, 40, 0.89)", "rgba(50, 172, 45, 0.97)"]
+      },
+      {
+        "title": "System Health",
+        "type": "singlestat",
+        "targets": [
+          {
+            "expr": "min(jit_system_health_status)",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 1},
+        "valueName": "current",
+        "colorBackground": true,
+        "thresholds": "0.5,1",
+        "colors": ["rgba(245, 54, 54, 0.9)", "rgba(237, 129, 40, 0.89)", "rgba(50, 172, 45, 0.97)"],
+        "valueMaps": [
+          {"value": "0", "text": "DOWN"},
+          {"value": "1", "text": "UP"}
+        ]
+      },
+      {
+        "title": "Access Requests",
+        "type": "row",
+        "collapsed": false,
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 5}
+      },
+      {
+        "title": "Access Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(jit_access_requests_total[5m])",
+            "legendFormat": "Requests/sec",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(jit_access_requests_approved_total[5m])",
+            "legendFormat": "Approved/sec",
+            "refId": "B"
+          },
+          {
+            "expr": "rate(jit_access_requests_denied_total[5m])",
+            "legendFormat": "Denied/sec",
+            "refId": "C"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6},
+        "yAxes": [
+          {
+            "label": "Requests/second",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "title": "Request Processing Duration",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(jit_access_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "p50",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(jit_access_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "p95",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(jit_access_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "p99",
+            "refId": "C"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6},
+        "yAxes": [
+          {
+            "label": "Duration (seconds)",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "title": "Active Sessions by Cluster",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum by (cluster) (jit_active_access_sessions)",
+            "legendFormat": "{{cluster}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 14},
+        "yAxes": [
+          {
+            "label": "Active Sessions",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "title": "Performance & Errors",
+        "type": "row",
+        "collapsed": false,
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 22}
+      },
+      {
+        "title": "Webhook Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(jit_webhook_requests_total[5m])",
+            "legendFormat": "{{webhook_type}} {{operation}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 23},
+        "yAxes": [
+          {
+            "label": "Requests/second",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "title": "Webhook Latency",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(jit_webhook_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "p95 {{webhook_type}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 23},
+        "yAxes": [
+          {
+            "label": "Duration (seconds)",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "title": "Error Rates",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(jit_webhook_validation_errors_total[5m])",
+            "legendFormat": "Webhook Validation Errors",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(jit_aws_api_errors_total[5m])",
+            "legendFormat": "AWS API Errors",
+            "refId": "B"
+          },
+          {
+            "expr": "rate(jit_slack_api_errors_total[5m])",
+            "legendFormat": "Slack API Errors",
+            "refId": "C"
+          },
+          {
+            "expr": "rate(jit_controller_errors_total[5m])",
+            "legendFormat": "Controller Errors",
+            "refId": "D"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 23},
+        "yAxes": [
+          {
+            "label": "Errors/second",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "title": "Security",
+        "type": "row",
+        "collapsed": false,
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 31}
+      },
+      {
+        "title": "Security Violations",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "increase(jit_security_violations_total[1h])",
+            "legendFormat": "{{violation_type}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
+        "yAxes": [
+          {
+            "label": "Violations (1h)",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "title": "Privilege Escalation Attempts",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "increase(jit_privilege_escalation_attempts_total[1h])",
+            "legendFormat": "{{user}} ({{cluster}})",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
+        "yAxes": [
+          {
+            "label": "Attempts (1h)",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "title": "Infrastructure",
+        "type": "row",
+        "collapsed": false,
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 40}
+      },
+      {
+        "title": "AWS API Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(jit_aws_api_calls_total[5m])",
+            "legendFormat": "{{service}} {{operation}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 41},
+        "yAxes": [
+          {
+            "label": "Calls/second",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "title": "Slack Integration Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(jit_slack_commands_total[5m])",
+            "legendFormat": "{{command}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 41},
+        "yAxes": [
+          {
+            "label": "Commands/second",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "title": "System Health Status",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "jit_system_health_status",
+            "legendFormat": "{{component}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 49},
+        "yAxes": [
+          {
+            "label": "Health (1=healthy, 0=unhealthy)",
+            "min": 0,
+            "max": 1
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s",
+    "schemaVersion": 30,
+    "version": 1,
+    "links": [
+      {
+        "title": "JIT Bot Documentation",
+        "url": "https://github.com/your-org/jit-bot",
+        "type": "absolute"
+      }
+    ]
+  }
+}

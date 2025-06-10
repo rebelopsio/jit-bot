@@ -1,0 +1,30 @@
+# Example configuration file for JIT Server
+server:
+  port: "8080"
+  readTimeout: "15s"
+  writeTimeout: "15s"
+  idleTimeout: "60s"
+
+slack:
+  token: ""  # Set via JIT_SLACK_TOKEN env var
+  signingSecret: ""  # Set via JIT_SLACK_SIGNINGSECRET env var
+
+aws:
+  region: "us-east-1"
+  accountIds: []
+  samlProviderArn: ""
+  eksClusterPrefix: ""
+
+access:
+  maxDuration: "1h"
+  approvalRequired: true
+
+log:
+  level: "info"
+  format: "json"
+
+auth:
+  adminUsers:
+    - "U12345"  # Replace with actual Slack user IDs
+  approvers:
+    - "U67890"  # Replace with actual Slack user IDs

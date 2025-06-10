@@ -1,0 +1,15 @@
+apiVersion: v2
+name: jit-bot
+description: A Helm chart for JIT Bot - Just-In-Time Access Tool
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - jit
+  - access-control
+  - aws
+  - eks
+  - slack
+maintainers:
+  - name: Platform Team
+    email: platform@rebelops.io

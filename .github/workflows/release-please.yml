@@ -1,0 +1,45 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: google-github-actions/release-please-action@v4
+        id: release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release-type: go
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        if: ${{ steps.release.outputs.release_created }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.4'
+        if: ${{ steps.release.outputs.release_created }}
+
+      - name: Build binaries
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          GOOS=linux GOARCH=amd64 go build -o jit-server-linux-amd64 ./cmd/jit-server
+          GOOS=linux GOARCH=arm64 go build -o jit-server-linux-arm64 ./cmd/jit-server
+          GOOS=darwin GOARCH=amd64 go build -o jit-server-darwin-amd64 ./cmd/jit-server
+          GOOS=darwin GOARCH=arm64 go build -o jit-server-darwin-arm64 ./cmd/jit-server
+
+      - name: Upload Release Artifacts
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ steps.release.outputs.tag_name }} jit-server-*

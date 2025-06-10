@@ -1,0 +1,273 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: jit-bot-alerts
+  namespace: jit-system
+  labels:
+    app: jit-bot
+    component: monitoring
+spec:
+  groups:
+  - name: jit-bot.security
+    interval: 30s
+    rules:
+    - alert: HighPrivilegeEscalationAttempts
+      expr: increase(jit_privilege_escalation_attempts_total[5m]) > 5
+      for: 1m
+      labels:
+        severity: critical
+        component: security
+      annotations:
+        summary: "High number of privilege escalation attempts detected"
+        description: "{{ $value }} privilege escalation attempts detected in the last 5 minutes. User: {{ $labels.user }}, Cluster: {{ $labels.cluster }}"
+
+    - alert: SecurityViolationSpike
+      expr: increase(jit_security_violations_total[5m]) > 10
+      for: 2m
+      labels:
+        severity: warning
+        component: security
+      annotations:
+        summary: "Spike in security violations detected"
+        description: "{{ $value }} security violations detected in the last 5 minutes. Type: {{ $labels.violation_type }}"
+
+    - alert: SuspiciousAccessPattern
+      expr: rate(jit_access_requests_total[10m]) > 20
+      for: 5m
+      labels:
+        severity: warning
+        component: security
+      annotations:
+        summary: "Suspicious access request pattern detected"
+        description: "High rate of access requests detected: {{ $value }} requests per second over 10 minutes"
+
+  - name: jit-bot.availability
+    interval: 30s
+    rules:
+    - alert: JITOperatorDown
+      expr: up{job="jit-operator"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        component: operator
+      annotations:
+        summary: "JIT Operator is down"
+        description: "JIT Operator has been down for more than 1 minute"
+
+    - alert: JITServerDown
+      expr: up{job="jit-server"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        component: server
+      annotations:
+        summary: "JIT Server is down"
+        description: "JIT Server has been down for more than 1 minute"
+
+    - alert: WebhookServiceUnavailable
+      expr: jit_system_health_status{component="webhook"} == 0
+      for: 2m
+      labels:
+        severity: critical
+        component: webhook
+      annotations:
+        summary: "Webhook service is unhealthy"
+        description: "Webhook service has been unhealthy for more than 2 minutes"
+
+    - alert: AWSIntegrationFailure
+      expr: jit_system_health_status{component="aws"} == 0
+      for: 2m
+      labels:
+        severity: critical
+        component: aws
+      annotations:
+        summary: "AWS integration is failing"
+        description: "AWS integration has been failing for more than 2 minutes"
+
+  - name: jit-bot.performance
+    interval: 30s
+    rules:
+    - alert: HighWebhookLatency
+      expr: histogram_quantile(0.95, rate(jit_webhook_request_duration_seconds_bucket[5m])) > 5
+      for: 3m
+      labels:
+        severity: warning
+        component: webhook
+      annotations:
+        summary: "High webhook request latency"
+        description: "95th percentile webhook latency is {{ $value }}s over the last 5 minutes"
+
+    - alert: HighAccessRequestProcessingTime
+      expr: histogram_quantile(0.95, rate(jit_access_request_duration_seconds_bucket[10m])) > 300
+      for: 5m
+      labels:
+        severity: warning
+        component: operator
+      annotations:
+        summary: "High access request processing time"
+        description: "95th percentile access request processing time is {{ $value }}s over the last 10 minutes"
+
+    - alert: SlackCommandLatency
+      expr: histogram_quantile(0.95, rate(jit_slack_command_duration_seconds_bucket[5m])) > 10
+      for: 3m
+      labels:
+        severity: warning
+        component: slack
+      annotations:
+        summary: "High Slack command latency"
+        description: "95th percentile Slack command latency is {{ $value }}s over the last 5 minutes"
+
+  - name: jit-bot.errors
+    interval: 30s
+    rules:
+    - alert: HighWebhookValidationErrorRate
+      expr: rate(jit_webhook_validation_errors_total[5m]) > 5
+      for: 2m
+      labels:
+        severity: warning
+        component: webhook
+      annotations:
+        summary: "High webhook validation error rate"
+        description: "{{ $value }} webhook validation errors per second over the last 5 minutes"
+
+    - alert: AWSAPIErrorRate
+      expr: rate(jit_aws_api_errors_total[5m]) > 2
+      for: 3m
+      labels:
+        severity: warning
+        component: aws
+      annotations:
+        summary: "High AWS API error rate"
+        description: "{{ $value }} AWS API errors per second. Service: {{ $labels.service }}, Operation: {{ $labels.operation }}"
+
+    - alert: SlackAPIErrorRate
+      expr: rate(jit_slack_api_errors_total[5m]) > 1
+      for: 3m
+      labels:
+        severity: warning
+        component: slack
+      annotations:
+        summary: "High Slack API error rate"
+        description: "{{ $value }} Slack API errors per second over the last 5 minutes"
+
+    - alert: ControllerReconcileErrors
+      expr: rate(jit_controller_errors_total[5m]) > 0.5
+      for: 5m
+      labels:
+        severity: warning
+        component: controller
+      annotations:
+        summary: "High controller reconcile error rate"
+        description: "{{ $value }} controller errors per second. Controller: {{ $labels.controller }}"
+
+  - name: jit-bot.business
+    interval: 60s
+    rules:
+    - alert: LowAccessRequestApprovalRate
+      expr: |
+        (
+          rate(jit_access_requests_approved_total[1h]) / 
+          (rate(jit_access_requests_approved_total[1h]) + rate(jit_access_requests_denied_total[1h]))
+        ) < 0.7
+      for: 10m
+      labels:
+        severity: warning
+        component: business
+      annotations:
+        summary: "Low access request approval rate"
+        description: "Access request approval rate is {{ $value | humanizePercentage }} over the last hour"
+
+    - alert: HighActiveSessionCount
+      expr: sum(jit_active_access_sessions) > 100
+      for: 5m
+      labels:
+        severity: warning
+        component: business
+      annotations:
+        summary: "High number of active access sessions"
+        description: "{{ $value }} active access sessions detected"
+
+    - alert: StaleActiveSession
+      expr: |
+        (time() - jit_last_successful_backup_timestamp) > 86400
+      for: 0m
+      labels:
+        severity: critical
+        component: business
+      annotations:
+        summary: "Backup system has not run successfully in 24 hours"
+        description: "Last successful backup was {{ $value | humanizeDuration }} ago"
+
+  - name: jit-bot.capacity
+    interval: 60s
+    rules:
+    - alert: HighRequestVolume
+      expr: rate(jit_access_requests_total[1h]) > 50
+      for: 10m
+      labels:
+        severity: info
+        component: capacity
+      annotations:
+        summary: "High access request volume"
+        description: "{{ $value }} access requests per second over the last hour"
+
+    - alert: ClusterAccessSaturation
+      expr: |
+        sum by (cluster) (jit_active_access_sessions) / 
+        sum by (cluster) (jit_access_requests_total) > 0.8
+      for: 15m
+      labels:
+        severity: warning
+        component: capacity
+      annotations:
+        summary: "High access saturation for cluster"
+        description: "Cluster {{ $labels.cluster }} has {{ $value | humanizePercentage }} access saturation"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jit-bot-recording-rules
+  namespace: jit-system
+data:
+  recording-rules.yaml: |
+    groups:
+    - name: jit-bot.aggregations
+      interval: 60s
+      rules:
+      # Request rate aggregations
+      - record: jit:access_request_rate_5m
+        expr: rate(jit_access_requests_total[5m])
+      
+      - record: jit:access_request_rate_1h
+        expr: rate(jit_access_requests_total[1h])
+      
+      # Success rate aggregations
+      - record: jit:access_approval_rate_1h
+        expr: |
+          rate(jit_access_requests_approved_total[1h]) /
+          (rate(jit_access_requests_approved_total[1h]) + rate(jit_access_requests_denied_total[1h]))
+      
+      # Error rate aggregations
+      - record: jit:error_rate_5m
+        expr: |
+          (
+            rate(jit_webhook_validation_errors_total[5m]) +
+            rate(jit_aws_api_errors_total[5m]) +
+            rate(jit_slack_api_errors_total[5m]) +
+            rate(jit_controller_errors_total[5m])
+          )
+      
+      # Latency aggregations
+      - record: jit:webhook_latency_p95_5m
+        expr: histogram_quantile(0.95, rate(jit_webhook_request_duration_seconds_bucket[5m]))
+      
+      - record: jit:slack_latency_p95_5m
+        expr: histogram_quantile(0.95, rate(jit_slack_command_duration_seconds_bucket[5m]))
+      
+      # Capacity aggregations
+      - record: jit:active_sessions_by_cluster
+        expr: sum by (cluster, environment) (jit_active_access_sessions)
+      
+      - record: jit:total_active_sessions
+        expr: sum(jit_active_access_sessions)

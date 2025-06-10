@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jit-operator-config
+  namespace: jit-system
+  labels:
+    app.kubernetes.io/name: jit-operator
+    app.kubernetes.io/component: config
+data:
+  aws-region: "us-east-1"
+  max-access-duration: "8h"
+  default-access-duration: "1h"
+  auto-approve-view-permissions: "true"
+  cleanup-expired-requests: "true"
+  # List of clusters and their configurations
+  clusters.yaml: |
+    clusters:
+      - name: "prod-east-1"
+        awsAccount: "123456789012"
+        region: "us-east-1"
+        endpoint: "https://abcdef123.gr7.us-east-1.eks.amazonaws.com"
+        maxDuration: "4h"
+        requireApproval: true
+        approvers:
+          - "platform-team"
+          - "sre-team"
+      - name: "staging-east-1"
+        awsAccount: "123456789012"
+        region: "us-east-1"
+        endpoint: "https://xyz789.gr7.us-east-1.eks.amazonaws.com"
+        maxDuration: "8h"
+        requireApproval: false
+      - name: "dev-west-2"
+        awsAccount: "987654321098"
+        region: "us-west-2"
+        endpoint: "https://dev123.gr7.us-west-2.eks.amazonaws.com"
+        maxDuration: "12h"
+        requireApproval: false

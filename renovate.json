@@ -1,0 +1,37 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base"
+  ],
+  "semanticCommits": "enabled",
+  "postUpdateOptions": ["gomodTidy"],
+  "packageRules": [
+    {
+      "matchPackagePatterns": ["*"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "all non-major dependencies",
+      "groupSlug": "all-minor-patch"
+    },
+    {
+      "matchManagers": ["gomod"],
+      "addLabels": ["dependencies", "go"]
+    },
+    {
+      "matchManagers": ["helm-values", "helm-requirements"],
+      "addLabels": ["dependencies", "helm"]
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "addLabels": ["dependencies", "github-actions"]
+    }
+  ],
+  "gomod": {
+    "enabled": true
+  },
+  "helm-values": {
+    "enabled": true
+  },
+  "github-actions": {
+    "enabled": true
+  }
+}
