@@ -118,7 +118,9 @@ func (r *JITAccessRequestReconciler) handleApprovedRequest(ctx context.Context, 
 	if err := r.Create(ctx, job); err != nil {
 		log.Error(err, "unable to create JITAccessJob")
 		jitReq.Status.Message = fmt.Sprintf("Failed to create access job: %v", err)
-		r.Status().Update(ctx, jitReq)
+		if err := r.Status().Update(ctx, jitReq); err != nil {
+			log.Error(err, "unable to update JITAccessRequest status after job creation failure")
+		}
 		return ctrl.Result{}, err
 	}
 

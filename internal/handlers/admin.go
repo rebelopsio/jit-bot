@@ -65,7 +65,9 @@ func (h *AdminHandler) CreateCluster(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(cluster)
+	if err := json.NewEncoder(w).Encode(cluster); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *AdminHandler) ListClusters(w http.ResponseWriter, r *http.Request) {
@@ -87,7 +89,9 @@ func (h *AdminHandler) ListClusters(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(clusters)
+	if err := json.NewEncoder(w).Encode(clusters); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *AdminHandler) UpdateCluster(w http.ResponseWriter, r *http.Request) {
@@ -114,7 +118,9 @@ func (h *AdminHandler) UpdateCluster(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(cluster)
+	if err := json.NewEncoder(w).Encode(cluster); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *AdminHandler) DeleteCluster(w http.ResponseWriter, r *http.Request) {
@@ -168,9 +174,11 @@ func (h *AdminHandler) ManageUser(w http.ResponseWriter, r *http.Request) {
 	h.rbac.SetUserRole(req.UserID, req.Role)
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
+	if err := json.NewEncoder(w).Encode(map[string]string{
 		"message": "user role updated",
 		"user_id": req.UserID,
 		"role":    string(req.Role),
-	})
+	}); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
 }

@@ -13,6 +13,11 @@ import (
 	"github.com/rebelopsio/jit-bot/pkg/controller"
 )
 
+const (
+	envProduction = "production"
+	envStaging    = "staging"
+)
+
 // JITAccessRequestMutator mutates JITAccessRequest resources
 type JITAccessRequestMutator struct {
 	Client  client.Client
@@ -164,14 +169,14 @@ func (m *JITAccessRequestMutator) setApprovers(req *controller.JITAccessRequest)
 	approvers := []string{}
 
 	// Production clusters always require approval
-	if env == "production" {
+	if env == envProduction {
 		approvers = append(approvers, "platform-team", "sre-team")
 
 		// Additional approval for elevated permissions in prod
 		if hasElevatedPerms {
 			approvers = append(approvers, "security-team")
 		}
-	} else if env == "staging" {
+	} else if env == envStaging {
 		// Staging requires approval for elevated permissions
 		if hasElevatedPerms {
 			approvers = append(approvers, "platform-team")

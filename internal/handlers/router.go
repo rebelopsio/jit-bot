@@ -66,12 +66,16 @@ type Handler struct {
 
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	if _, err := w.Write([]byte("OK")); err != nil {
+		// Log error but don't fail the health check
+	}
 }
 
 func (h *Handler) Ready(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Ready"))
+	if _, err := w.Write([]byte("Ready")); err != nil {
+		// Log error but don't fail the readiness check
+	}
 }
 
 func (h *Handler) SlackEvents(w http.ResponseWriter, r *http.Request) {

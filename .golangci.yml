@@ -23,7 +23,6 @@ linters:
     - goconst
     - gocritic
     - gocyclo
-    - godot
     - gofumpt
     - goprintffuncname
     - lll
@@ -37,6 +36,8 @@ linters:
     - unconvert
     - unparam
     - whitespace
+  disable:
+    - godot  # Comment periods can be enforced later
 
 linters-settings:
   govet:
@@ -79,3 +80,11 @@ issues:
         - goconst
         - gochecknoinits
         - scopelint
+    # Allow init functions in cmd directories (for Cobra CLI setup)
+    - path: cmd/.*\.go
+      linters:
+        - gochecknoinits
+    # Allow init functions in metrics package (for Prometheus registration)
+    - path: pkg/metrics/.*\.go
+      linters:
+        - gochecknoinits

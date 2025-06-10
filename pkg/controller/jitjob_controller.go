@@ -116,7 +116,9 @@ func (r *JITAccessJobReconciler) handleCreatingJob(ctx context.Context, job *JIT
 			Reason:             "AccessRequestNotFound",
 			Message:            fmt.Sprintf("Failed to fetch access request: %v", err),
 		})
-		r.Status().Update(ctx, job)
+		if err := r.Status().Update(ctx, job); err != nil {
+			log.Error(err, "unable to update JITAccessJob status")
+		}
 		return ctrl.Result{}, err
 	}
 
@@ -141,7 +143,9 @@ func (r *JITAccessJobReconciler) handleCreatingJob(ctx context.Context, job *JIT
 			Reason:             "AccessGrantFailed",
 			Message:            fmt.Sprintf("Failed to grant access: %v", err),
 		})
-		r.Status().Update(ctx, job)
+		if err := r.Status().Update(ctx, job); err != nil {
+			log.Error(err, "unable to update JITAccessJob status")
+		}
 		return ctrl.Result{}, err
 	}
 
@@ -245,7 +249,9 @@ func (r *JITAccessJobReconciler) handleExpiringJob(ctx context.Context, job *JIT
 				Namespace: job.Status.AccessEntry.CredentialsSecretRef.Namespace,
 			},
 		}
-		r.Delete(ctx, secret)
+		if err := r.Delete(ctx, secret); err != nil {
+			log.Error(err, "failed to delete credentials secret")
+		}
 	}
 
 	if job.Status.KubeConfigSecretRef != nil {
@@ -255,7 +261,9 @@ func (r *JITAccessJobReconciler) handleExpiringJob(ctx context.Context, job *JIT
 				Namespace: job.Status.KubeConfigSecretRef.Namespace,
 			},
 		}
-		r.Delete(ctx, secret)
+		if err := r.Delete(ctx, secret); err != nil {
+			log.Error(err, "failed to delete kubeconfig secret")
+		}
 	}
 
 	// Mark as completed

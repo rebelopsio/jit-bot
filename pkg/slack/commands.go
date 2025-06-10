@@ -13,6 +13,10 @@ import (
 	"github.com/rebelopsio/jit-bot/pkg/store"
 )
 
+const (
+	cmdAdmin = "admin"
+)
+
 type CommandHandler struct {
 	rbac  *auth.RBAC
 	store *store.MemoryStore
@@ -67,7 +71,7 @@ func (h *CommandHandler) HandleJITCommand(w http.ResponseWriter, r *http.Request
 		h.handleListClusters(w, cmd)
 	case "status":
 		h.handleStatus(w, cmd)
-	case "admin":
+	case cmdAdmin:
 		h.handleAdmin(w, cmd, args)
 	case "help":
 		h.sendHelp(w)
@@ -130,7 +134,9 @@ func (h *CommandHandler) handleRequestAccess(w http.ResponseWriter, cmd SlackCom
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *CommandHandler) handleListClusters(w http.ResponseWriter, cmd SlackCommand) {
@@ -173,7 +179,9 @@ func (h *CommandHandler) handleListClusters(w http.ResponseWriter, cmd SlackComm
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *CommandHandler) handleStatus(w http.ResponseWriter, cmd SlackCommand) {
@@ -227,7 +235,9 @@ func (h *CommandHandler) handleStatus(w http.ResponseWriter, cmd SlackCommand) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *CommandHandler) handleAdmin(w http.ResponseWriter, cmd SlackCommand, args []string) {
@@ -274,7 +284,9 @@ func (h *CommandHandler) sendMessage(w http.ResponseWriter, text string) {
 		"text":          text,
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *CommandHandler) sendError(w http.ResponseWriter, text string) {
@@ -283,5 +295,7 @@ func (h *CommandHandler) sendError(w http.ResponseWriter, text string) {
 		"text":          "❌ " + text,
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
 }

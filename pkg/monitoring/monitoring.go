@@ -15,6 +15,11 @@ import (
 	"github.com/rebelopsio/jit-bot/pkg/telemetry"
 )
 
+const (
+	statusSuccess = "success"
+	statusError   = "error"
+)
+
 var (
 	logger = log.Log.WithName("monitoring")
 )
@@ -111,8 +116,12 @@ func (m *Monitor) startMetricsServer() error {
 	mux.Handle("/metrics", promhttp.Handler())
 
 	m.metricsServer = &http.Server{
-		Addr:    fmt.Sprintf(":%d", m.config.MetricsPort),
-		Handler: mux,
+		Addr:               fmt.Sprintf(":%d", m.config.MetricsPort),
+		Handler:            mux,
+		ReadHeaderTimeout:  5 * time.Second,
+		ReadTimeout:        30 * time.Second,
+		WriteTimeout:       30 * time.Second,
+		IdleTimeout:        60 * time.Second,
 	}
 
 	go func() {
@@ -130,29 +139,41 @@ func (m *Monitor) startHealthServer() error {
 	// Add health check endpoints
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		if _, err := w.Write([]byte("ok")); err != nil {
+			logger.Error(err, "Failed to write health check response")
+		}
 	})
 
 	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		// Check if all components are ready
 		if m.isSystemReady() {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("ready"))
+			if _, err := w.Write([]byte("ready")); err != nil {
+				logger.Error(err, "Failed to write readiness response")
+			}
 		} else {
 			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte("not ready"))
+			if _, err := w.Write([]byte("not ready")); err != nil {
+				logger.Error(err, "Failed to write not ready response")
+			}
 		}
 	})
 
 	mux.HandleFunc("/livez", func(w http.ResponseWriter, r *http.Request) {
 		// Check if system is alive
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("alive"))
+		if _, err := w.Write([]byte("alive")); err != nil {
+			logger.Error(err, "Failed to write liveness response")
+		}
 	})
 
 	m.healthServer = &http.Server{
-		Addr:    fmt.Sprintf(":%d", m.config.HealthPort),
-		Handler: mux,
+		Addr:               fmt.Sprintf(":%d", m.config.HealthPort),
+		Handler:            mux,
+		ReadHeaderTimeout:  5 * time.Second,
+		ReadTimeout:        30 * time.Second,
+		WriteTimeout:       30 * time.Second,
+		IdleTimeout:        60 * time.Second,
 	}
 
 	go func() {
@@ -197,9 +218,9 @@ func (m *Monitor) TrackWebhookRequest(ctx context.Context, webhookType, operatio
 	err := telemetry.InstrumentWebhook(ctx, webhookType, operation, fn)
 
 	// Record metrics
-	status := "success"
+	status := statusSuccess
 	if err != nil {
-		status = "error"
+		status = statusError
 	}
 	metrics.RecordWebhookRequest(webhookType, operation, status, time.Since(start))
 
@@ -214,9 +235,9 @@ func (m *Monitor) TrackAWSCall(ctx context.Context, service, operation, region s
 	err := telemetry.InstrumentAWSCall(ctx, service, operation, region, fn)
 
 	// Record metrics
-	status := "success"
+	status := statusSuccess
 	if err != nil {
-		status = "error"
+		status = statusError
 		// Try to extract AWS error code
 		// This would need AWS SDK specific error handling
 		metrics.RecordAWSAPIError(service, operation, "unknown", region)
@@ -234,9 +255,9 @@ func (m *Monitor) TrackSlackCommand(ctx context.Context, command, userID, channe
 	err := telemetry.InstrumentSlackCommand(ctx, command, fn)
 
 	// Record metrics
-	status := "success"
+	status := statusSuccess
 	if err != nil {
-		status = "error"
+		status = statusError
 	}
 	metrics.RecordSlackCommand(command, userID, channelID, status, time.Since(start))
 

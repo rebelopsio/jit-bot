@@ -123,7 +123,9 @@ func parseDuration(duration string) (time.Duration, error) {
 	var total time.Duration
 	for _, match := range matches {
 		value := 0
-		fmt.Sscanf(match[1], "%d", &value)
+		if _, err := fmt.Sscanf(match[1], "%d", &value); err != nil {
+			return 0, fmt.Errorf("invalid duration value: %s", match[1])
+		}
 		unit := match[2]
 
 		switch unit {

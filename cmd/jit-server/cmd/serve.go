@@ -34,15 +34,27 @@ func init() {
 	serveCmd.Flags().Int("max-access-duration", 3600, "Maximum access duration in seconds")
 	serveCmd.Flags().Bool("approval-required", true, "Require approval for access requests")
 
-	viper.BindPFlag("server.port", serveCmd.Flags().Lookup("port"))
-	viper.BindPFlag("slack.token", serveCmd.Flags().Lookup("slack-token"))
-	viper.BindPFlag("slack.signingSecret", serveCmd.Flags().Lookup("slack-signing-secret"))
-	viper.BindPFlag("aws.region", serveCmd.Flags().Lookup("aws-region"))
-	viper.BindPFlag("aws.accountIds", serveCmd.Flags().Lookup("aws-account-ids"))
-	viper.BindPFlag("aws.samlProviderArn", serveCmd.Flags().Lookup("saml-provider-arn"))
-	viper.BindPFlag("aws.eksClusterPrefix", serveCmd.Flags().Lookup("eks-cluster-prefix"))
-	viper.BindPFlag("access.maxDuration", serveCmd.Flags().Lookup("max-access-duration"))
-	viper.BindPFlag("access.approvalRequired", serveCmd.Flags().Lookup("approval-required"))
+	// Bind flags to viper with error handling
+	flags := []struct {
+		key  string
+		flag string
+	}{
+		{"server.port", "port"},
+		{"slack.token", "slack-token"},
+		{"slack.signingSecret", "slack-signing-secret"},
+		{"aws.region", "aws-region"},
+		{"aws.accountIds", "aws-account-ids"},
+		{"aws.samlProviderArn", "saml-provider-arn"},
+		{"aws.eksClusterPrefix", "eks-cluster-prefix"},
+		{"access.maxDuration", "max-access-duration"},
+		{"access.approvalRequired", "approval-required"},
+	}
+
+	for _, f := range flags {
+		if err := viper.BindPFlag(f.key, serveCmd.Flags().Lookup(f.flag)); err != nil {
+			log.Printf("Error binding flag %s: %v", f.flag, err)
+		}
+	}
 }
 
 func runServe(cmd *cobra.Command, args []string) error {
