@@ -29,6 +29,16 @@ func (v *JITAccessRequestValidator) Handle(ctx context.Context, req admission.Re
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
+	// Validate user ID format
+	if err := validateUserID(accessReq.Spec.UserID); err != nil {
+		return admission.Denied(fmt.Sprintf("invalid user ID format: %v", err))
+	}
+
+	// Validate email format
+	if err := validateEmail(accessReq.Spec.UserEmail); err != nil {
+		return admission.Denied(fmt.Sprintf("invalid email format: %v", err))
+	}
+
 	// Validate duration format
 	if err := validateDuration(accessReq.Spec.Duration); err != nil {
 		return admission.Denied(fmt.Sprintf("invalid duration: %v", err))
@@ -46,6 +56,11 @@ func (v *JITAccessRequestValidator) Handle(ctx context.Context, req admission.Re
 
 	// Validate reason is provided and meaningful
 	if err := validateReason(accessReq.Spec.Reason); err != nil {
+		return admission.Denied(fmt.Sprintf("invalid reason: %v", err))
+	}
+
+	// Validate reason is sufficient for elevated permissions
+	if err := validateReasonForPermissions(accessReq.Spec.Reason, accessReq.Spec.Permissions); err != nil {
 		return admission.Denied(fmt.Sprintf("invalid reason: %v", err))
 	}
 
@@ -71,16 +86,10 @@ func (v *JITAccessRequestValidator) InjectDecoder(d admission.Decoder) error {
 // Validation helper functions
 
 func validateDuration(duration string) error {
-	// Support formats: 1h, 30m, 2h30m, 1d, etc.
-	durationRegex := regexp.MustCompile(`^(\d+[dhms])+$`)
-	if !durationRegex.MatchString(duration) {
-		return fmt.Errorf("duration must be in format like '1h', '30m', '2h30m', '1d'")
-	}
-
 	// Parse duration to ensure it's valid
 	parsedDuration, err := parseDuration(duration)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid duration format - duration must be in format like '1h', '30m', '2h30m', '1d'")
 	}
 
 	// Check duration limits
@@ -99,29 +108,48 @@ func validateDuration(duration string) error {
 }
 
 func parseDuration(duration string) (time.Duration, error) {
-	// Convert formats like "1d" to "24h"
-	duration = strings.ReplaceAll(duration, "d", "h*24")
-	
-	// Handle multiplication in the string
-	if strings.Contains(duration, "*") {
-		parts := strings.Split(duration, "*")
-		if len(parts) == 2 {
-			baseValue := parts[0]
-			multiplier := parts[1]
-			
-			// Extract numeric value from base
-			var num int
-			fmt.Sscanf(baseValue, "%dh", &num)
-			
-			// Parse multiplier
-			var mult int
-			fmt.Sscanf(multiplier, "%d", &mult)
-			
-			duration = fmt.Sprintf("%dh", num*mult)
-		}
+	if duration == "" {
+		return 0, fmt.Errorf("duration cannot be empty")
 	}
 
-	return time.ParseDuration(duration)
+	// Parse duration components using regexp
+	re := regexp.MustCompile(`(\d+)([dhms])`)
+	matches := re.FindAllStringSubmatch(duration, -1)
+	
+	if len(matches) == 0 {
+		return 0, fmt.Errorf("invalid duration format: %s", duration)
+	}
+	
+	var total time.Duration
+	for _, match := range matches {
+		value := 0
+		fmt.Sscanf(match[1], "%d", &value)
+		unit := match[2]
+		
+		switch unit {
+		case "d":
+			total += time.Duration(value) * 24 * time.Hour
+		case "h":
+			total += time.Duration(value) * time.Hour
+		case "m":
+			total += time.Duration(value) * time.Minute
+		case "s":
+			total += time.Duration(value) * time.Second
+		default:
+			return 0, fmt.Errorf("invalid duration unit: %s", unit)
+		}
+	}
+	
+	// Verify that the parsed string matches the original (no invalid parts)
+	rebuiltString := ""
+	for _, match := range matches {
+		rebuiltString += match[0]
+	}
+	if rebuiltString != duration {
+		return 0, fmt.Errorf("invalid duration format: %s", duration)
+	}
+	
+	return total, nil
 }
 
 func validatePermissions(permissions []string) error {
@@ -167,7 +195,7 @@ func validateCluster(cluster controller.TargetCluster) error {
 	// Validate AWS account ID format (12 digits)
 	accountRegex := regexp.MustCompile(`^\d{12}$`)
 	if !accountRegex.MatchString(cluster.AWSAccount) {
-		return fmt.Errorf("AWS account ID must be 12 digits")
+		return fmt.Errorf("invalid AWS account ID format - AWS account ID must be 12 digits")
 	}
 
 	if cluster.Region == "" {
@@ -216,7 +244,7 @@ func validateReason(reason string) error {
 			return fmt.Errorf("please provide a meaningful business reason for access")
 		}
 	}
-
+	
 	return nil
 }
 
@@ -255,7 +283,7 @@ func validateNamespaces(namespaces []string, permissions []string) error {
 	namespaceRegex := regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
 	for _, ns := range namespaces {
 		if !namespaceRegex.MatchString(ns) {
-			return fmt.Errorf("invalid namespace name: %s", ns)
+			return fmt.Errorf("invalid namespace format - invalid namespace name: %s", ns)
 		}
 	}
 
@@ -299,6 +327,74 @@ func getKeys(m map[string]bool) []string {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+// validateUserID validates the user ID format
+func validateUserID(userID string) error {
+	if userID == "" {
+		return fmt.Errorf("user ID is required")
+	}
+	
+	// Slack user ID format: U followed by 10 alphanumeric characters
+	userIDRegex := regexp.MustCompile(`^U[A-Z0-9]{10}$`)
+	if !userIDRegex.MatchString(userID) {
+		return fmt.Errorf("must be a valid Slack user ID (e.g., U1234567890)")
+	}
+	
+	return nil
+}
+
+// validateEmail validates the email format
+func validateEmail(email string) error {
+	if email == "" {
+		return fmt.Errorf("email is required")
+	}
+	
+	// Basic email validation
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	if !emailRegex.MatchString(email) {
+		return fmt.Errorf("must be a valid email address")
+	}
+	
+	return nil
+}
+
+// validateReasonForPermissions validates that the reason is sufficient for the requested permissions
+func validateReasonForPermissions(reason string, permissions []string) error {
+	lowerReason := strings.ToLower(reason)
+	genericPhrases := []string{
+		"need access",
+		"want access",
+		"need to debug",
+		"want to debug",
+		"need to check",
+		"want to check",
+		"testing something",
+		"trying to",
+	}
+	
+	// Check if cluster-admin permission requires detailed justification
+	if contains(permissions, "cluster-admin") {
+		// Check for generic phrases first for cluster-admin
+		for _, phrase := range genericPhrases {
+			if strings.Contains(lowerReason, phrase) {
+				return fmt.Errorf("cluster-admin permission requires detailed justification")
+			}
+		}
+		
+		if len(reason) < 50 {
+			return fmt.Errorf("cluster-admin permission requires detailed justification (at least 50 characters)")
+		}
+	} else {
+		// Check for generic reasons for any permission
+		for _, phrase := range genericPhrases {
+			if strings.Contains(lowerReason, phrase) {
+				return fmt.Errorf("reason appears generic - please provide specific business justification")
+			}
+		}
+	}
+	
+	return nil
 }
 
 // ValidateDelete ensures JITAccessRequests can be safely deleted
