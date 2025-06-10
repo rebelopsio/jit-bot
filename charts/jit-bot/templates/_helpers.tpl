@@ -1,14 +1,14 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "tailscale-jit.name" -}}
+{{- define "jit-bot.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Create a default fully qualified app name.
 */}}
-{{- define "tailscale-jit.fullname" -}}
+{{- define "jit-bot.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -24,16 +24,16 @@ Create a default fully qualified app name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "tailscale-jit.chart" -}}
+{{- define "jit-bot.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "tailscale-jit.labels" -}}
-helm.sh/chart: {{ include "tailscale-jit.chart" . }}
-{{ include "tailscale-jit.selectorLabels" . }}
+{{- define "jit-bot.labels" -}}
+helm.sh/chart: {{ include "jit-bot.chart" . }}
+{{ include "jit-bot.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -43,17 +43,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "tailscale-jit.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "tailscale-jit.name" . }}
+{{- define "jit-bot.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "jit-bot.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "tailscale-jit.serviceAccountName" -}}
+{{- define "jit-bot.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "tailscale-jit.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "jit-bot.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
