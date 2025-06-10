@@ -84,6 +84,25 @@ func TestLoadFromViperWithDefaults(t *testing.T) {
 	}
 }
 
+func validateExpectedError(t *testing.T, err error, expectedMsg string) {
+	if err == nil {
+		t.Error("Expected error but got none")
+		return
+	}
+	if err.Error() != "config validation failed: "+expectedMsg {
+		t.Errorf("Expected error '%s', got '%s'", expectedMsg, err.Error())
+	}
+}
+
+func validateSuccessCase(t *testing.T, err error, cfg *Config) {
+	if err != nil {
+		t.Errorf("Expected no error but got: %v", err)
+	}
+	if cfg == nil {
+		t.Error("Expected config but got nil")
+	}
+}
+
 func TestLoadFromViperValidation(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -127,18 +146,9 @@ func TestLoadFromViperValidation(t *testing.T) {
 			cfg, err := LoadFromViper()
 
 			if test.expectError {
-				if err == nil {
-					t.Error("Expected error but got none")
-				} else if err.Error() != "config validation failed: "+test.errorMsg {
-					t.Errorf("Expected error '%s', got '%s'", test.errorMsg, err.Error())
-				}
+				validateExpectedError(t, err, test.errorMsg)
 			} else {
-				if err != nil {
-					t.Errorf("Expected no error but got: %v", err)
-				}
-				if cfg == nil {
-					t.Error("Expected config but got nil")
-				}
+				validateSuccessCase(t, err, cfg)
 			}
 		})
 	}

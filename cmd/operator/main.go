@@ -80,15 +80,18 @@ func main() {
 	monitor := monitoring.NewMonitor(monitoringConfig)
 	ctx := context.Background()
 
+	// Start monitor and set up cleanup, but don't defer if we might exit early
 	if err := monitor.Start(ctx); err != nil {
 		setupLog.Error(err, "unable to start monitoring")
 		os.Exit(1)
 	}
-	defer func() {
+
+	// Set up cleanup function for later deferred call
+	cleanup := func() {
 		if err := monitor.Stop(ctx); err != nil {
 			setupLog.Error(err, "failed to stop monitoring")
 		}
-	}()
+	}
 
 	// Configure webhook server options
 	webhookOpts := ctrl.Options{
@@ -107,6 +110,9 @@ func main() {
 		return
 	}
 
+	// Now that basic setup is successful, establish cleanup for monitoring
+	defer cleanup()
+
 	// Initialize AWS services
 	if awsRegion == "" {
 		awsRegion = os.Getenv("AWS_REGION")
@@ -118,7 +124,7 @@ func main() {
 	accessManager, err := kubernetes.NewAccessManager(awsRegion)
 	if err != nil {
 		setupLog.Error(err, "unable to create access manager")
-		os.Exit(1)
+		return
 	}
 
 	// Initialize RBAC
@@ -131,7 +137,7 @@ func main() {
 		RBAC:   rbac,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "JITAccessRequest")
-		os.Exit(1)
+		return
 	}
 
 	if err = (&controller.JITAccessJobReconciler{
@@ -140,29 +146,29 @@ func main() {
 		AccessManager: accessManager,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "JITAccessJob")
-		os.Exit(1)
+		return
 	}
 
 	// Setup webhooks
 	if err = webhookpkg.SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to setup webhooks")
-		os.Exit(1)
+		return
 	}
 
 	// Add health check endpoints
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+	if err = mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
-		os.Exit(1)
+		return
 	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	if err = mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
-		os.Exit(1)
+		return
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err = mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
+		return
 	}
 }
 

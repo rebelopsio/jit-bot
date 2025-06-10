@@ -117,7 +117,7 @@ func TestHandleRequestAccess(t *testing.T) {
 		t.Fatalf("Failed to create cluster: %v", err)
 	}
 
-	req := createTestRequest( "request test-cluster debugging issue #1234", "user123")
+	req := createTestRequest("request test-cluster debugging issue #1234", "user123")
 	rr := httptest.NewRecorder()
 
 	handler.HandleJITCommand(rr, req)
@@ -146,7 +146,7 @@ func TestHandleRequestAccessInvalidCluster(t *testing.T) {
 	memStore := store.NewMemoryStore()
 	handler := NewCommandHandler(rbac, memStore)
 
-	req := createTestRequest( "request nonexistent-cluster debugging", "user123")
+	req := createTestRequest("request nonexistent-cluster debugging", "user123")
 	rr := httptest.NewRecorder()
 
 	handler.HandleJITCommand(rr, req)
@@ -184,7 +184,7 @@ func TestHandleRequestAccessDisabledCluster(t *testing.T) {
 		t.Fatalf("Failed to create cluster: %v", err)
 	}
 
-	req := createTestRequest( "request disabled-cluster debugging", "user123")
+	req := createTestRequest("request disabled-cluster debugging", "user123")
 	rr := httptest.NewRecorder()
 
 	handler.HandleJITCommand(rr, req)
@@ -209,7 +209,7 @@ func TestHandleRequestAccessInsufficientArgs(t *testing.T) {
 	memStore := store.NewMemoryStore()
 	handler := NewCommandHandler(rbac, memStore)
 
-	req := createTestRequest( "request cluster-only", "user123")
+	req := createTestRequest("request cluster-only", "user123")
 	rr := httptest.NewRecorder()
 
 	handler.HandleJITCommand(rr, req)
@@ -261,7 +261,7 @@ func TestHandleListClusters(t *testing.T) {
 		t.Fatalf("Failed to create cluster2: %v", err)
 	}
 
-	req := createTestRequest( "list", "user123")
+	req := createTestRequest("list", "user123")
 	rr := httptest.NewRecorder()
 
 	handler.HandleJITCommand(rr, req)
@@ -290,7 +290,7 @@ func TestHandleListClustersEmpty(t *testing.T) {
 	memStore := store.NewMemoryStore()
 	handler := NewCommandHandler(rbac, memStore)
 
-	req := createTestRequest( "list", "user123")
+	req := createTestRequest("list", "user123")
 	rr := httptest.NewRecorder()
 
 	handler.HandleJITCommand(rr, req)
@@ -330,7 +330,7 @@ func TestHandleStatus(t *testing.T) {
 		t.Fatalf("Failed to create access: %v", err)
 	}
 
-	req := createTestRequest( "status", "user123")
+	req := createTestRequest("status", "user123")
 	rr := httptest.NewRecorder()
 
 	handler.HandleJITCommand(rr, req)
@@ -359,7 +359,7 @@ func TestHandleStatusEmpty(t *testing.T) {
 	memStore := store.NewMemoryStore()
 	handler := NewCommandHandler(rbac, memStore)
 
-	req := createTestRequest( "status", "user123")
+	req := createTestRequest("status", "user123")
 	rr := httptest.NewRecorder()
 
 	handler.HandleJITCommand(rr, req)
@@ -384,7 +384,7 @@ func TestHandleAdmin(t *testing.T) {
 	memStore := store.NewMemoryStore()
 	handler := NewCommandHandler(rbac, memStore)
 
-	req := createTestRequest( "admin", "admin1")
+	req := createTestRequest("admin", "admin1")
 	rr := httptest.NewRecorder()
 
 	handler.HandleJITCommand(rr, req)
@@ -409,7 +409,7 @@ func TestHandleAdminUnauthorized(t *testing.T) {
 	memStore := store.NewMemoryStore()
 	handler := NewCommandHandler(rbac, memStore)
 
-	req := createTestRequest( "admin", "user123")
+	req := createTestRequest("admin", "user123")
 	rr := httptest.NewRecorder()
 
 	handler.HandleJITCommand(rr, req)
@@ -434,7 +434,7 @@ func TestHandleUnknownCommand(t *testing.T) {
 	memStore := store.NewMemoryStore()
 	handler := NewCommandHandler(rbac, memStore)
 
-	req := createTestRequest( "unknown-command", "user123")
+	req := createTestRequest("unknown-command", "user123")
 	rr := httptest.NewRecorder()
 
 	handler.HandleJITCommand(rr, req)

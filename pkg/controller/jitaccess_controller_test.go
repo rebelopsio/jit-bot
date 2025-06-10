@@ -97,7 +97,7 @@ func TestJITAccessRequestReconciler_Reconcile(t *testing.T) {
 			},
 			expectJob:     true,
 			expectStatus:  AccessPhaseActive,
-			expectRequeue: false,
+			expectRequeue: true,
 		},
 		{
 			name: "denied request does not create job",
@@ -176,7 +176,7 @@ func TestJITAccessRequestReconciler_Reconcile(t *testing.T) {
 			},
 			expectJob:     true,
 			expectStatus:  AccessPhaseActive,
-			expectRequeue: false,
+			expectRequeue: true,
 		},
 	}
 

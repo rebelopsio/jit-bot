@@ -89,7 +89,7 @@ func (h *AdminHandler) ListClusters(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(clusters); err != nil {
+	if err = json.NewEncoder(w).Encode(clusters); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
 }

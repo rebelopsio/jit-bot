@@ -30,48 +30,48 @@ func (v *JITAccessRequestValidator) Handle(ctx context.Context, req admission.Re
 	}
 
 	// Validate user ID format
-	if err := validateUserID(accessReq.Spec.UserID); err != nil {
-		return admission.Denied(fmt.Sprintf("invalid user ID format: %v", err))
+	if validationErr := validateUserID(accessReq.Spec.UserID); validationErr != nil {
+		return admission.Denied(fmt.Sprintf("invalid user ID format: %v", validationErr))
 	}
 
 	// Validate email format
-	if err := validateEmail(accessReq.Spec.UserEmail); err != nil {
-		return admission.Denied(fmt.Sprintf("invalid email format: %v", err))
+	if validationErr := validateEmail(accessReq.Spec.UserEmail); validationErr != nil {
+		return admission.Denied(fmt.Sprintf("invalid email format: %v", validationErr))
 	}
 
 	// Validate duration format
-	if err := validateDuration(accessReq.Spec.Duration); err != nil {
-		return admission.Denied(fmt.Sprintf("invalid duration: %v", err))
+	if validationErr := validateDuration(accessReq.Spec.Duration); validationErr != nil {
+		return admission.Denied(fmt.Sprintf("invalid duration: %v", validationErr))
 	}
 
 	// Validate permissions
-	if err := validatePermissions(accessReq.Spec.Permissions); err != nil {
-		return admission.Denied(fmt.Sprintf("invalid permissions: %v", err))
+	if validationErr := validatePermissions(accessReq.Spec.Permissions); validationErr != nil {
+		return admission.Denied(fmt.Sprintf("invalid permissions: %v", validationErr))
 	}
 
 	// Validate cluster configuration
-	if err := validateCluster(accessReq.Spec.TargetCluster); err != nil {
-		return admission.Denied(fmt.Sprintf("invalid cluster configuration: %v", err))
+	if validationErr := validateCluster(accessReq.Spec.TargetCluster); validationErr != nil {
+		return admission.Denied(fmt.Sprintf("invalid cluster configuration: %v", validationErr))
 	}
 
 	// Validate reason is provided and meaningful
-	if err := validateReason(accessReq.Spec.Reason); err != nil {
-		return admission.Denied(fmt.Sprintf("invalid reason: %v", err))
+	if validationErr := validateReason(accessReq.Spec.Reason); validationErr != nil {
+		return admission.Denied(fmt.Sprintf("invalid reason: %v", validationErr))
 	}
 
 	// Validate reason is sufficient for elevated permissions
-	if err := validateReasonForPermissions(accessReq.Spec.Reason, accessReq.Spec.Permissions); err != nil {
-		return admission.Denied(fmt.Sprintf("invalid reason: %v", err))
+	if validationErr := validateReasonForPermissions(accessReq.Spec.Reason, accessReq.Spec.Permissions); validationErr != nil {
+		return admission.Denied(fmt.Sprintf("invalid reason: %v", validationErr))
 	}
 
 	// Validate approvers if specified
-	if err := validateApprovers(accessReq.Spec.Approvers); err != nil {
-		return admission.Denied(fmt.Sprintf("invalid approvers: %v", err))
+	if validationErr := validateApprovers(accessReq.Spec.Approvers); validationErr != nil {
+		return admission.Denied(fmt.Sprintf("invalid approvers: %v", validationErr))
 	}
 
 	// Check if namespaces are valid when specified
-	if err := validateNamespaces(accessReq.Spec.Namespaces, accessReq.Spec.Permissions); err != nil {
-		return admission.Denied(fmt.Sprintf("invalid namespaces: %v", err))
+	if validationErr := validateNamespaces(accessReq.Spec.Namespaces, accessReq.Spec.Permissions); validationErr != nil {
+		return admission.Denied(fmt.Sprintf("invalid namespaces: %v", validationErr))
 	}
 
 	return admission.Allowed("")

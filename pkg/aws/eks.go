@@ -71,7 +71,7 @@ func (e *EKSService) CreateAccessEntry(ctx context.Context, entry AccessEntry) e
 
 	// Associate access policies if provided
 	for _, policy := range entry.AccessPolicies {
-		err := e.AssociateAccessPolicy(ctx, entry.ClusterName, entry.PrincipalArn, policy)
+		err = e.AssociateAccessPolicy(ctx, entry.ClusterName, entry.PrincipalArn, policy)
 		if err != nil {
 			// Log warning but don't fail the entire operation
 			slog.Warn("Failed to associate policy", "policy_arn", policy.PolicyArn, "error", err)

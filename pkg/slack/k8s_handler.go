@@ -138,7 +138,7 @@ func (h *K8sCommandHandler) HandleApproveCommand(ctx context.Context, cmd SlackC
 		return &SlackResponse{
 			ResponseType: "ephemeral",
 			Text:         fmt.Sprintf("❌ Request not found: %s", requestName),
-		}, nil
+		}, err
 	}
 
 	// Add approval

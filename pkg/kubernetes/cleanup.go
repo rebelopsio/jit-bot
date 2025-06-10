@@ -60,8 +60,8 @@ func (cs *CleanupService) performCleanup(ctx context.Context) error {
 	}
 
 	for _, cluster := range clusters {
-		if err := cs.cleanupClusterAccess(ctx, cluster); err != nil {
-			slog.Error("Failed to cleanup cluster", "cluster", cluster.Name, "error", err)
+		if cleanupErr := cs.cleanupClusterAccess(ctx, cluster); cleanupErr != nil {
+			slog.Error("Failed to cleanup cluster", "cluster", cluster.Name, "error", cleanupErr)
 		}
 	}
 

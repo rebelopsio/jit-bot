@@ -90,12 +90,12 @@ func (r *JITAccessJobReconciler) handlePendingJob(ctx context.Context, job *JITA
 		Message:            "JIT access job has started",
 	})
 
-	if err := r.Status().Update(ctx, job); err != nil {
+	if err = r.Status().Update(ctx, job); err != nil {
 		log.Error(err, "unable to update JITAccessJob status")
 		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{Requeue: true}, nil
+	return ctrl.Result{RequeueAfter: time.Second}, nil
 }
 
 func (r *JITAccessJobReconciler) handleCreatingJob(ctx context.Context, job *JITAccessJob) (ctrl.Result, error) {
@@ -186,7 +186,7 @@ func (r *JITAccessJobReconciler) handleCreatingJob(ctx context.Context, job *JIT
 		Message:            "JIT access has been successfully created",
 	})
 
-	if err := r.Status().Update(ctx, job); err != nil {
+	if err = r.Status().Update(ctx, job); err != nil {
 		log.Error(err, "unable to update JITAccessJob status")
 		return ctrl.Result{}, err
 	}
@@ -212,7 +212,7 @@ func (r *JITAccessJobReconciler) handleActiveJob(ctx context.Context, job *JITAc
 		if err := r.Status().Update(ctx, job); err != nil {
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 
 	// Continue monitoring
@@ -235,7 +235,7 @@ func (r *JITAccessJobReconciler) handleExpiringJob(ctx context.Context, job *JIT
 		clusterAccess := r.convertToClusterAccess(&accessReq)
 		cluster := r.convertToCluster(&accessReq.Spec.TargetCluster)
 
-		if err := r.AccessManager.RevokeAccess(ctx, clusterAccess, cluster, job.Spec.JITRoleArn); err != nil {
+		if err = r.AccessManager.RevokeAccess(ctx, clusterAccess, cluster, job.Spec.JITRoleArn); err != nil {
 			log.Error(err, "failed to revoke access")
 			// Don't fail the job, just log the error
 		}

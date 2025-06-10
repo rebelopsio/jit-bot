@@ -156,8 +156,8 @@ func (am *AccessManager) CleanupExpiredAccess(ctx context.Context, clusterName s
 	for _, entryArn := range entries {
 		// Check if entry is expired (this would require storing expiration metadata)
 		// For now, we'll rely on IAM session expiration
-		entry, err := am.eksService.DescribeAccessEntry(ctx, clusterName, entryArn)
-		if err != nil {
+		entry, describeErr := am.eksService.DescribeAccessEntry(ctx, clusterName, entryArn)
+		if describeErr != nil {
 			continue // Skip if we can't describe it
 		}
 

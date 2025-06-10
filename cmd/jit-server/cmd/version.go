@@ -17,7 +17,7 @@ var versionCmd = &cobra.Command{
 	Short: "Print the version information",
 	Long:  `Print the version information for the JIT server.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		slog.Info("JIT Server Version Information", 
+		slog.Info("JIT Server Version Information",
 			"version", version,
 			"commit", commit,
 			"built", date)

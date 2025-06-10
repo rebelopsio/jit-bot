@@ -98,7 +98,7 @@ func (r *JITAccessRequestReconciler) handlePendingRequest(ctx context.Context, j
 			log.Error(err, "unable to update JITAccessRequest status")
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 
 	// Request is still pending, check periodically
@@ -153,7 +153,7 @@ func (r *JITAccessRequestReconciler) handleDeniedRequest(ctx context.Context, ji
 	// For denied requests, we don't need to do anything special
 	// The status is already set to denied, just log and finish
 	log.Info("Request has been denied", "request", jitReq.Name, "reason", jitReq.Status.Message)
-	
+
 	// No requeue needed for denied requests
 	return ctrl.Result{}, nil
 }
@@ -178,7 +178,7 @@ func (r *JITAccessRequestReconciler) handleActiveRequest(ctx context.Context, ji
 			log.Error(err, "unable to update JITAccessRequest status")
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 
 	// Check associated JITAccessJob status
