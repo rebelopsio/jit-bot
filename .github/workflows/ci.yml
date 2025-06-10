@@ -63,4 +63,4 @@ jobs:
         version: 'latest'
 
     - name: Lint Helm chart
-      run: helm lint charts/tailscale-jit
+      run: helm lint charts/jit-bot
