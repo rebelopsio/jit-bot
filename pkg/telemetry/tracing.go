@@ -9,7 +9,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
@@ -101,11 +100,8 @@ func InitTracing(ctx context.Context, config TracingConfig) (*trace.TracerProvid
 }
 
 func createJaegerExporter(endpoint string) (trace.SpanExporter, error) {
-	if endpoint == "" {
-		endpoint = "http://localhost:14268/api/traces"
-	}
-
-	return jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(endpoint)))
+	// Jaeger exporter is deprecated, using OTLP instead
+	return createOTLPExporter(context.Background(), endpoint)
 }
 
 func createOTLPExporter(ctx context.Context, endpoint string) (trace.SpanExporter, error) {

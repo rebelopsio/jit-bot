@@ -71,7 +71,9 @@ func TestGetCluster(t *testing.T) {
 		CreatedBy:   "admin1",
 	}
 
-	store.CreateCluster(originalCluster)
+	if err := store.CreateCluster(originalCluster); err != nil {
+		t.Fatalf("Failed to create cluster: %v", err)
+	}
 
 	// Get existing cluster
 	cluster, err := store.GetCluster("test-cluster")
@@ -107,8 +109,12 @@ func TestListClusters(t *testing.T) {
 	cluster1 := &models.Cluster{ID: "cluster1", Name: "cluster1", CreatedBy: "admin1"}
 	cluster2 := &models.Cluster{ID: "cluster2", Name: "cluster2", CreatedBy: "admin1"}
 
-	store.CreateCluster(cluster1)
-	store.CreateCluster(cluster2)
+	if err1 := store.CreateCluster(cluster1); err1 != nil {
+		t.Fatalf("Failed to create cluster1: %v", err1)
+	}
+	if err2 := store.CreateCluster(cluster2); err2 != nil {
+		t.Fatalf("Failed to create cluster2: %v", err2)
+	}
 
 	clusters, err = store.ListClusters()
 	if err != nil {
@@ -134,7 +140,9 @@ func TestUpdateCluster(t *testing.T) {
 		CreatedBy:   "admin1",
 	}
 
-	store.CreateCluster(cluster)
+	if err := store.CreateCluster(cluster); err != nil {
+		t.Fatalf("Failed to create cluster: %v", err)
+	}
 	originalUpdatedAt := cluster.UpdatedAt
 
 	// Update cluster
@@ -166,7 +174,9 @@ func TestDeleteCluster(t *testing.T) {
 		CreatedBy: "admin1",
 	}
 
-	store.CreateCluster(cluster)
+	if err := store.CreateCluster(cluster); err != nil {
+		t.Fatalf("Failed to create cluster: %v", err)
+	}
 
 	// Delete existing cluster
 	err := store.DeleteCluster("test-cluster")
@@ -225,7 +235,9 @@ func TestGetAccess(t *testing.T) {
 		RequestedAt: time.Now(),
 	}
 
-	store.CreateAccess(originalAccess)
+	if err := store.CreateAccess(originalAccess); err != nil {
+		t.Fatalf("Failed to create access: %v", err)
+	}
 
 	// Get existing access
 	access, err := store.GetAccess("access-123")
@@ -268,9 +280,15 @@ func TestListUserAccesses(t *testing.T) {
 		Status:    models.AccessStatusPending,
 	}
 
-	store.CreateAccess(access1)
-	store.CreateAccess(access2)
-	store.CreateAccess(access3)
+	if err := store.CreateAccess(access1); err != nil {
+		t.Fatalf("Failed to create access1: %v", err)
+	}
+	if err := store.CreateAccess(access2); err != nil {
+		t.Fatalf("Failed to create access2: %v", err)
+	}
+	if err := store.CreateAccess(access3); err != nil {
+		t.Fatalf("Failed to create access3: %v", err)
+	}
 
 	// List accesses for user-123
 	accesses, err := store.ListUserAccesses("user-123")

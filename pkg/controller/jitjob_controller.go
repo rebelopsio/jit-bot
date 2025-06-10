@@ -116,8 +116,8 @@ func (r *JITAccessJobReconciler) handleCreatingJob(ctx context.Context, job *JIT
 			Reason:             "AccessRequestNotFound",
 			Message:            fmt.Sprintf("Failed to fetch access request: %v", err),
 		})
-		if err := r.Status().Update(ctx, job); err != nil {
-			log.Error(err, "unable to update JITAccessJob status")
+		if updateErr := r.Status().Update(ctx, job); updateErr != nil {
+			log.Error(updateErr, "unable to update JITAccessJob status")
 		}
 		return ctrl.Result{}, err
 	}
@@ -143,8 +143,8 @@ func (r *JITAccessJobReconciler) handleCreatingJob(ctx context.Context, job *JIT
 			Reason:             "AccessGrantFailed",
 			Message:            fmt.Sprintf("Failed to grant access: %v", err),
 		})
-		if err := r.Status().Update(ctx, job); err != nil {
-			log.Error(err, "unable to update JITAccessJob status")
+		if updateErr := r.Status().Update(ctx, job); updateErr != nil {
+			log.Error(updateErr, "unable to update JITAccessJob status")
 		}
 		return ctrl.Result{}, err
 	}

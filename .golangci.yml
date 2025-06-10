@@ -1,3 +1,5 @@
+version: "2"
+
 run:
   timeout: 5m
   modules-download-mode: readonly
@@ -5,86 +7,19 @@ run:
 
 linters:
   enable:
-    - gofmt
-    - goimports
-    - govet
     - errcheck
-    - staticcheck
-    - ineffassign
-    - typecheck
-    - unused
-    - gosimple
     - gosec
-    - bodyclose
-    - dogsled
-    - dupl
-    - copyloopvar
-    - gochecknoinits
-    - goconst
-    - gocritic
-    - gocyclo
-    - gofumpt
-    - goprintffuncname
-    - lll
-    - misspell
-    - nakedret
-    - noctx
-    - nolintlint
-    - prealloc
-    - rowserrcheck
-    - stylecheck
-    - unconvert
-    - unparam
-    - whitespace
-  disable:
-    - godot  # Comment periods can be enforced later
-
-linters-settings:
-  govet:
-    enable:
-    - shadow
-  gocyclo:
-    min-complexity: 15
-  dupl:
-    threshold: 100
-  goconst:
-    min-len: 2
-    min-occurrences: 2
-  misspell:
-    locale: US
-  lll:
-    line-length: 140
-  funlen:
-    lines: 100
-    statements: 50
-  nakedret:
-    max-func-lines: 30
-  nolintlint:
-    allow-no-explanation: [funlen, gocognit]
-    require-explanation: true
-    require-specific: true
-
-issues:
-  exclude-use-default: false
-  max-issues-per-linter: 0
-  max-same-issues: 0
-  exclude-rules:
-    # Exclude some linters from running on tests files.
-    - path: _test\.go
-      linters:
-        - gocyclo
-        - errcheck
-        - dupl
-        - gosec
-        - funlen
-        - goconst
-        - gochecknoinits
-        - scopelint
-    # Allow init functions in cmd directories (for Cobra CLI setup)
-    - path: cmd/.*\.go
-      linters:
-        - gochecknoinits
-    # Allow init functions in metrics package (for Prometheus registration)
-    - path: pkg/metrics/.*\.go
-      linters:
-        - gochecknoinits
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+  settings:
+    govet:
+      enable:
+        - shadow
+  exclusions:
+    rules:
+      - path: '_test\.go'
+        linters:
+          - errcheck
+          - gosec

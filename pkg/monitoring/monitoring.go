@@ -20,9 +20,7 @@ const (
 	statusError   = "error"
 )
 
-var (
-	logger = log.Log.WithName("monitoring")
-)
+var logger = log.Log.WithName("monitoring")
 
 // Config holds monitoring configuration
 type Config struct {
@@ -116,12 +114,12 @@ func (m *Monitor) startMetricsServer() error {
 	mux.Handle("/metrics", promhttp.Handler())
 
 	m.metricsServer = &http.Server{
-		Addr:               fmt.Sprintf(":%d", m.config.MetricsPort),
-		Handler:            mux,
-		ReadHeaderTimeout:  5 * time.Second,
-		ReadTimeout:        30 * time.Second,
-		WriteTimeout:       30 * time.Second,
-		IdleTimeout:        60 * time.Second,
+		Addr:              fmt.Sprintf(":%d", m.config.MetricsPort),
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
 	go func() {
@@ -168,12 +166,12 @@ func (m *Monitor) startHealthServer() error {
 	})
 
 	m.healthServer = &http.Server{
-		Addr:               fmt.Sprintf(":%d", m.config.HealthPort),
-		Handler:            mux,
-		ReadHeaderTimeout:  5 * time.Second,
-		ReadTimeout:        30 * time.Second,
-		WriteTimeout:       30 * time.Second,
-		IdleTimeout:        60 * time.Second,
+		Addr:              fmt.Sprintf(":%d", m.config.HealthPort),
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
 	go func() {

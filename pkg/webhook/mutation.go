@@ -169,14 +169,15 @@ func (m *JITAccessRequestMutator) setApprovers(req *controller.JITAccessRequest)
 	approvers := []string{}
 
 	// Production clusters always require approval
-	if env == envProduction {
+	switch env {
+	case envProduction:
 		approvers = append(approvers, "platform-team", "sre-team")
 
 		// Additional approval for elevated permissions in prod
 		if hasElevatedPerms {
 			approvers = append(approvers, "security-team")
 		}
-	} else if env == envStaging {
+	case envStaging:
 		// Staging requires approval for elevated permissions
 		if hasElevatedPerms {
 			approvers = append(approvers, "platform-team")
@@ -233,10 +234,10 @@ func determineEnvironment(clusterName string) string {
 	lowerName := strings.ToLower(clusterName)
 
 	if strings.Contains(lowerName, "prod") || strings.Contains(lowerName, "production") {
-		return "production"
+		return envProduction
 	}
 	if strings.Contains(lowerName, "stag") || strings.Contains(lowerName, "staging") {
-		return "staging"
+		return envStaging
 	}
 	if strings.Contains(lowerName, "dev") || strings.Contains(lowerName, "development") {
 		return "development"
@@ -246,7 +247,7 @@ func determineEnvironment(clusterName string) string {
 	}
 
 	// Default to production for safety
-	return "production"
+	return envProduction
 }
 
 func hasElevatedPermissions(permissions []string) bool {

@@ -113,7 +113,9 @@ func TestHandleRequestAccess(t *testing.T) {
 		Enabled:     true,
 		CreatedBy:   "admin1",
 	}
-	memStore.CreateCluster(cluster)
+	if err := memStore.CreateCluster(cluster); err != nil {
+		t.Fatalf("Failed to create cluster: %v", err)
+	}
 
 	req := createTestRequest("/jit", "request test-cluster debugging issue #1234", "user123")
 	rr := httptest.NewRecorder()
@@ -178,7 +180,9 @@ func TestHandleRequestAccessDisabledCluster(t *testing.T) {
 		Enabled:     false,
 		CreatedBy:   "admin1",
 	}
-	memStore.CreateCluster(cluster)
+	if err := memStore.CreateCluster(cluster); err != nil {
+		t.Fatalf("Failed to create cluster: %v", err)
+	}
 
 	req := createTestRequest("/jit", "request disabled-cluster debugging", "user123")
 	rr := httptest.NewRecorder()
@@ -250,8 +254,12 @@ func TestHandleListClusters(t *testing.T) {
 		CreatedBy:   "admin1",
 	}
 
-	memStore.CreateCluster(cluster1)
-	memStore.CreateCluster(cluster2)
+	if err := memStore.CreateCluster(cluster1); err != nil {
+		t.Fatalf("Failed to create cluster1: %v", err)
+	}
+	if err := memStore.CreateCluster(cluster2); err != nil {
+		t.Fatalf("Failed to create cluster2: %v", err)
+	}
 
 	req := createTestRequest("/jit", "list", "user123")
 	rr := httptest.NewRecorder()
@@ -318,7 +326,9 @@ func TestHandleStatus(t *testing.T) {
 		Status:      models.AccessStatusPending,
 		RequestedAt: time.Now(),
 	}
-	memStore.CreateAccess(access)
+	if err := memStore.CreateAccess(access); err != nil {
+		t.Fatalf("Failed to create access: %v", err)
+	}
 
 	req := createTestRequest("/jit", "status", "user123")
 	rr := httptest.NewRecorder()

@@ -127,8 +127,12 @@ func TestListClusters(t *testing.T) {
 		CreatedBy: "admin1",
 	}
 
-	memStore.CreateCluster(cluster1)
-	memStore.CreateCluster(cluster2)
+	if err := memStore.CreateCluster(cluster1); err != nil {
+		t.Fatalf("Failed to create cluster1: %v", err)
+	}
+	if err := memStore.CreateCluster(cluster2); err != nil {
+		t.Fatalf("Failed to create cluster2: %v", err)
+	}
 
 	req := httptest.NewRequest("GET", "/api/v1/clusters", nil)
 	req.Header.Set("X-Slack-User-ID", "requester1")
@@ -162,7 +166,9 @@ func TestUpdateCluster(t *testing.T) {
 		DisplayName: "Test Cluster",
 		CreatedBy:   "admin1",
 	}
-	memStore.CreateCluster(cluster)
+	if err := memStore.CreateCluster(cluster); err != nil {
+		t.Fatalf("Failed to create cluster: %v", err)
+	}
 
 	// Update cluster
 	cluster.DisplayName = "Updated Test Cluster"
@@ -200,7 +206,9 @@ func TestDeleteCluster(t *testing.T) {
 		Name:      "test-cluster",
 		CreatedBy: "admin1",
 	}
-	memStore.CreateCluster(cluster)
+	if err := memStore.CreateCluster(cluster); err != nil {
+		t.Fatalf("Failed to create cluster: %v", err)
+	}
 
 	req := httptest.NewRequest("DELETE", "/api/v1/clusters?id=test-cluster", nil)
 	req.Header.Set("X-Slack-User-ID", "admin1")

@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -162,8 +163,8 @@ func (am *AccessManager) CleanupExpiredAccess(ctx context.Context, clusterName s
 
 		// Check if entry is tagged as temporary and old enough
 		if entry.Tags["Temporary"] == "true" {
-			// You could implement logic here to check age and clean up
-			// For now, we'll leave this as a manual process
+			// TODO: Implement cleanup logic for temporary entries
+			log.Printf("Found temporary entry: %s (created: %s)", entry.PrincipalArn, entry.CreatedAt.String())
 		}
 	}
 

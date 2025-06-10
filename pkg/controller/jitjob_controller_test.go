@@ -200,7 +200,11 @@ func TestJITAccessJobReconciler_Reconcile(t *testing.T) {
 			}
 
 			assert.NoError(t, err)
-			assert.Equal(t, tt.expectRequeue, result.Requeue)
+			if tt.expectRequeue {
+				assert.True(t, result.RequeueAfter > 0, "Expected requeue but RequeueAfter was not set")
+			} else {
+				assert.Zero(t, result.RequeueAfter, "Expected no requeue but RequeueAfter was set")
+			}
 
 			// Check the job status was updated
 			updatedJob := &JITAccessJob{}
