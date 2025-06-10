@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/rebelopsio/jit-bot/internal/config"
@@ -69,7 +69,7 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write([]byte("OK")); err != nil {
 		// Log error but don't fail the health check
-		log.Printf("Failed to write health check response: %v", err)
+		slog.Error("Failed to write health check response", "error", err)
 	}
 }
 
@@ -77,7 +77,7 @@ func (h *Handler) Ready(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write([]byte("Ready")); err != nil {
 		// Log error but don't fail the readiness check
-		log.Printf("Failed to write readiness check response: %v", err)
+		slog.Error("Failed to write readiness check response", "error", err)
 	}
 }
 

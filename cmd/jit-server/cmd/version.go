@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"fmt"
+	"log/slog"
 
 	"github.com/spf13/cobra"
 )
@@ -17,10 +17,10 @@ var versionCmd = &cobra.Command{
 	Short: "Print the version information",
 	Long:  `Print the version information for the JIT server.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("JIT Server:\n")
-		fmt.Printf("  Version:  %s\n", version)
-		fmt.Printf("  Commit:   %s\n", commit)
-		fmt.Printf("  Built:    %s\n", date)
+		slog.Info("JIT Server Version Information", 
+			"version", version,
+			"commit", commit,
+			"built", date)
 	},
 }
 

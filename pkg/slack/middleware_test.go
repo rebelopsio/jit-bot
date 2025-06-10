@@ -48,7 +48,7 @@ func TestVerifyRequest(t *testing.T) {
 	h.Write([]byte(baseString))
 	signature := "v0=" + hex.EncodeToString(h.Sum(nil))
 
-	req := httptest.NewRequest("POST", "/slack/commands", strings.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/slack/commands", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("X-Slack-Request-Timestamp", timestamp)
 	req.Header.Set("X-Slack-Signature", signature)
@@ -67,8 +67,8 @@ func TestVerifyRequest(t *testing.T) {
 	}
 
 	// Verify user ID was extracted
-	if req.Header.Get("X-Slack-User-ID") != "U123456" {
-		t.Errorf("Expected user ID U123456, got %s", req.Header.Get("X-Slack-User-ID"))
+	if req.Header.Get("X-Slack-User-Id") != "U123456" {
+		t.Errorf("Expected user ID U123456, got %s", req.Header.Get("X-Slack-User-Id"))
 	}
 }
 
@@ -91,7 +91,7 @@ func TestVerifyRequestMissingHeaders(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			req := httptest.NewRequest("POST", "/slack/commands", strings.NewReader("test=body"))
+			req := httptest.NewRequest(http.MethodPost, "/slack/commands", strings.NewReader("test=body"))
 			if test.timestamp != "" {
 				req.Header.Set("X-Slack-Request-Timestamp", test.timestamp)
 			}
@@ -115,7 +115,7 @@ func TestVerifyRequestInvalidTimestamp(t *testing.T) {
 		t.Error("Handler should not be called")
 	})
 
-	req := httptest.NewRequest("POST", "/slack/commands", strings.NewReader("test=body"))
+	req := httptest.NewRequest(http.MethodPost, "/slack/commands", strings.NewReader("test=body"))
 	req.Header.Set("X-Slack-Request-Timestamp", "invalid")
 	req.Header.Set("X-Slack-Signature", "v0=signature")
 
@@ -136,7 +136,7 @@ func TestVerifyRequestOldTimestamp(t *testing.T) {
 	// Use timestamp from 10 minutes ago
 	oldTimestamp := strconv.FormatInt(time.Now().Unix()-600, 10)
 
-	req := httptest.NewRequest("POST", "/slack/commands", strings.NewReader("test=body"))
+	req := httptest.NewRequest(http.MethodPost, "/slack/commands", strings.NewReader("test=body"))
 	req.Header.Set("X-Slack-Request-Timestamp", oldTimestamp)
 	req.Header.Set("X-Slack-Signature", "v0=signature")
 
@@ -157,7 +157,7 @@ func TestVerifyRequestInvalidSignature(t *testing.T) {
 	body := "test=body"
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 
-	req := httptest.NewRequest("POST", "/slack/commands", strings.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/slack/commands", strings.NewReader(body))
 	req.Header.Set("X-Slack-Request-Timestamp", timestamp)
 	req.Header.Set("X-Slack-Signature", "v0=invalid_signature")
 
@@ -175,7 +175,7 @@ func TestVerifyRequestUserExtraction(t *testing.T) {
 
 	var extractedUserID, extractedUserName string
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		extractedUserID = r.Header.Get("X-Slack-User-ID")
+		extractedUserID = r.Header.Get("X-Slack-User-Id")
 		extractedUserName = r.Header.Get("X-Slack-User-Name")
 		w.WriteHeader(http.StatusOK)
 	})
@@ -196,7 +196,7 @@ func TestVerifyRequestUserExtraction(t *testing.T) {
 	h.Write([]byte(baseString))
 	signature := "v0=" + hex.EncodeToString(h.Sum(nil))
 
-	req := httptest.NewRequest("POST", "/slack/commands", strings.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/slack/commands", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("X-Slack-Request-Timestamp", timestamp)
 	req.Header.Set("X-Slack-Signature", signature)

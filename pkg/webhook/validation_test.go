@@ -1,7 +1,6 @@
 package webhook
 
 import (
-	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -385,7 +384,7 @@ func TestJITAccessRequestValidator_Handle(t *testing.T) {
 				},
 			}
 
-			ctx := context.Background()
+			ctx := t.Context()
 			resp := validator.Handle(ctx, req)
 
 			assert.Equal(t, tt.wantAllowed, resp.Allowed, "Expected allowed=%v, got=%v", tt.wantAllowed, resp.Allowed)

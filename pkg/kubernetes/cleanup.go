@@ -3,7 +3,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -35,23 +35,23 @@ func (cs *CleanupService) StartCleanupWorker(ctx context.Context, interval time.
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	log.Printf("Starting cleanup worker with %v interval", interval)
+	slog.Info("Starting cleanup worker", "interval", interval)
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Cleanup worker stopped")
+			slog.Info("Cleanup worker stopped")
 			return
 		case <-ticker.C:
 			if err := cs.performCleanup(ctx); err != nil {
-				log.Printf("Cleanup error: %v", err)
+				slog.Error("Cleanup error", "error", err)
 			}
 		}
 	}
 }
 
 func (cs *CleanupService) performCleanup(ctx context.Context) error {
-	log.Println("Starting cleanup cycle")
+	slog.Info("Starting cleanup cycle")
 
 	// Get all clusters to check for expired access
 	clusters, err := cs.store.ListClusters()
@@ -61,7 +61,7 @@ func (cs *CleanupService) performCleanup(ctx context.Context) error {
 
 	for _, cluster := range clusters {
 		if err := cs.cleanupClusterAccess(ctx, cluster); err != nil {
-			log.Printf("Failed to cleanup cluster %s: %v", cluster.Name, err)
+			slog.Error("Failed to cleanup cluster", "cluster", cluster.Name, "error", err)
 		}
 	}
 
@@ -85,20 +85,20 @@ func (cs *CleanupService) cleanupClusterAccess(ctx context.Context, cluster *mod
 		// Check if we have a corresponding access record
 		access, err := cs.findAccessBySession(sessionInfo)
 		if err != nil {
-			log.Printf("No access record found for session %s: %v", sessionInfo.SessionName, err)
+			slog.Warn("No access record found for session", "session", sessionInfo.SessionName, "error", err)
 			// Cleanup orphaned entries
 			if err := cs.accessManager.eksService.DeleteAccessEntry(ctx, cluster.Name, entryArn); err != nil {
-				log.Printf("Failed to delete orphaned access entry %s: %v", entryArn, err)
+				slog.Error("Failed to delete orphaned access entry", "entry_arn", entryArn, "error", err)
 			}
 			continue
 		}
 
 		// Check if access has expired
 		if cs.isAccessExpired(access) {
-			log.Printf("Cleaning up expired access for user %s, cluster %s", access.UserID, cluster.Name)
+			slog.Info("Cleaning up expired access", "user", access.UserID, "cluster", cluster.Name)
 
 			if err := cs.revokeExpiredAccess(ctx, access, cluster, entryArn); err != nil {
-				log.Printf("Failed to revoke expired access: %v", err)
+				slog.Error("Failed to revoke expired access", "error", err)
 			}
 		}
 	}
@@ -130,7 +130,7 @@ func (cs *CleanupService) revokeExpiredAccess(ctx context.Context, access *model
 	// Note: In a real implementation, you'd want to update the store here
 	// For the memory store, we might need to add an UpdateAccess method
 
-	log.Printf("Successfully revoked expired access for user %s", access.UserID)
+	slog.Info("Successfully revoked expired access", "user", access.UserID)
 	return nil
 }
 
@@ -197,9 +197,9 @@ func (cs *CleanupService) ForceCleanupCluster(ctx context.Context, clusterName s
 
 	for _, entryArn := range entries {
 		if err := cs.accessManager.eksService.DeleteAccessEntry(ctx, clusterName, entryArn); err != nil {
-			log.Printf("Failed to delete access entry %s: %v", entryArn, err)
+			slog.Error("Failed to delete access entry", "entry_arn", entryArn, "error", err)
 		} else {
-			log.Printf("Deleted access entry: %s", entryArn)
+			slog.Info("Deleted access entry", "entry_arn", entryArn)
 		}
 	}
 
@@ -216,7 +216,7 @@ func (cs *CleanupService) CleanupUserAccess(ctx context.Context, userID string) 
 	for _, cluster := range clusters {
 		entries, err := cs.accessManager.ListActiveAccess(ctx, cluster.Name)
 		if err != nil {
-			log.Printf("Failed to list access for cluster %s: %v", cluster.Name, err)
+			slog.Error("Failed to list access for cluster", "cluster", cluster.Name, "error", err)
 			continue
 		}
 
@@ -224,9 +224,9 @@ func (cs *CleanupService) CleanupUserAccess(ctx context.Context, userID string) 
 			sessionInfo := extractSessionInfo(entryArn)
 			if sessionInfo != nil && sessionInfo.UserID == userID {
 				if err := cs.accessManager.eksService.DeleteAccessEntry(ctx, cluster.Name, entryArn); err != nil {
-					log.Printf("Failed to delete user access entry %s: %v", entryArn, err)
+					slog.Error("Failed to delete user access entry", "entry_arn", entryArn, "error", err)
 				} else {
-					log.Printf("Deleted user %s access entry: %s", userID, entryArn)
+					slog.Info("Deleted user access entry", "user", userID, "entry_arn", entryArn)
 				}
 			}
 		}

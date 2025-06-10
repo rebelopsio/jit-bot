@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -52,7 +52,7 @@ func init() {
 
 	for _, f := range flags {
 		if err := viper.BindPFlag(f.key, serveCmd.Flags().Lookup(f.flag)); err != nil {
-			log.Printf("Error binding flag %s: %v", f.flag, err)
+			slog.Error("Error binding flag", "flag", f.flag, "error", err)
 		}
 	}
 }
@@ -76,10 +76,10 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 	go func() {
 		<-sigChan
-		log.Println("Shutting down...")
+		slog.Info("Shutting down...")
 		cancel()
 	}()
 
-	log.Printf("Starting JIT server on port %s", cfg.Port())
+	slog.Info("Starting JIT server", "port", cfg.Port())
 	return srv.Run(ctx)
 }

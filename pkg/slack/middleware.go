@@ -66,7 +66,7 @@ func (m *SlackMiddleware) VerifyRequest(next http.Handler) http.Handler {
 				userID := r.FormValue("user_id")
 				userName := r.FormValue("user_name")
 				if userID != "" {
-					r.Header.Set("X-Slack-User-ID", userID)
+					r.Header.Set("X-Slack-User-Id", userID)
 					r.Header.Set("X-Slack-User-Name", userName)
 				}
 			}

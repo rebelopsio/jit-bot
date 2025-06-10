@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -73,7 +74,7 @@ func (e *EKSService) CreateAccessEntry(ctx context.Context, entry AccessEntry) e
 		err := e.AssociateAccessPolicy(ctx, entry.ClusterName, entry.PrincipalArn, policy)
 		if err != nil {
 			// Log warning but don't fail the entire operation
-			fmt.Printf("Warning: failed to associate policy %s: %v\n", policy.PolicyArn, err)
+			slog.Warn("Failed to associate policy", "policy_arn", policy.PolicyArn, "error", err)
 		}
 	}
 

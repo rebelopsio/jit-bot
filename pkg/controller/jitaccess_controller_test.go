@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -214,7 +213,7 @@ func TestJITAccessRequestReconciler_Reconcile(t *testing.T) {
 			}
 
 			// Perform reconciliation
-			ctx := context.Background()
+			ctx := t.Context()
 			result, err := reconciler.Reconcile(ctx, req)
 
 			if tt.expectError {

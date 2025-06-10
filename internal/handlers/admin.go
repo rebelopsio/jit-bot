@@ -24,7 +24,7 @@ func NewAdminHandler(rbac *auth.RBAC, store *store.MemoryStore) *AdminHandler {
 }
 
 func (h *AdminHandler) CreateCluster(w http.ResponseWriter, r *http.Request) {
-	userID := r.Header.Get("X-Slack-User-ID")
+	userID := r.Header.Get("X-Slack-User-Id")
 	if userID == "" {
 		http.Error(w, "missing user ID", http.StatusUnauthorized)
 		return
@@ -71,7 +71,7 @@ func (h *AdminHandler) CreateCluster(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AdminHandler) ListClusters(w http.ResponseWriter, r *http.Request) {
-	userID := r.Header.Get("X-Slack-User-ID")
+	userID := r.Header.Get("X-Slack-User-Id")
 	if userID == "" {
 		http.Error(w, "missing user ID", http.StatusUnauthorized)
 		return
@@ -95,7 +95,7 @@ func (h *AdminHandler) ListClusters(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AdminHandler) UpdateCluster(w http.ResponseWriter, r *http.Request) {
-	userID := r.Header.Get("X-Slack-User-ID")
+	userID := r.Header.Get("X-Slack-User-Id")
 	if userID == "" {
 		http.Error(w, "missing user ID", http.StatusUnauthorized)
 		return
@@ -124,7 +124,7 @@ func (h *AdminHandler) UpdateCluster(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AdminHandler) DeleteCluster(w http.ResponseWriter, r *http.Request) {
-	userID := r.Header.Get("X-Slack-User-ID")
+	userID := r.Header.Get("X-Slack-User-Id")
 	if userID == "" {
 		http.Error(w, "missing user ID", http.StatusUnauthorized)
 		return
@@ -150,7 +150,7 @@ func (h *AdminHandler) DeleteCluster(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AdminHandler) ManageUser(w http.ResponseWriter, r *http.Request) {
-	userID := r.Header.Get("X-Slack-User-ID")
+	userID := r.Header.Get("X-Slack-User-Id")
 	if userID == "" {
 		http.Error(w, "missing user ID", http.StatusUnauthorized)
 		return

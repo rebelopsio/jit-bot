@@ -44,6 +44,8 @@ func (r *JITAccessRequestReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return r.handlePendingRequest(ctx, &jitReq)
 	case AccessPhaseApproved:
 		return r.handleApprovedRequest(ctx, &jitReq)
+	case AccessPhaseDenied:
+		return r.handleDeniedRequest(ctx, &jitReq)
 	case AccessPhaseActive:
 		return r.handleActiveRequest(ctx, &jitReq)
 	case AccessPhaseExpired, AccessPhaseRevoked:
@@ -143,6 +145,17 @@ func (r *JITAccessRequestReconciler) handleApprovedRequest(ctx context.Context, 
 
 	log.Info("Created JITAccessJob", "job", job.Name)
 	return ctrl.Result{RequeueAfter: time.Minute * 2}, nil
+}
+
+func (r *JITAccessRequestReconciler) handleDeniedRequest(ctx context.Context, jitReq *JITAccessRequest) (ctrl.Result, error) {
+	log := log.FromContext(ctx)
+
+	// For denied requests, we don't need to do anything special
+	// The status is already set to denied, just log and finish
+	log.Info("Request has been denied", "request", jitReq.Name, "reason", jitReq.Status.Message)
+	
+	// No requeue needed for denied requests
+	return ctrl.Result{}, nil
 }
 
 func (r *JITAccessRequestReconciler) handleActiveRequest(ctx context.Context, jitReq *JITAccessRequest) (ctrl.Result, error) {
