@@ -16,12 +16,12 @@ const (
 type Permission string
 
 const (
-	PermissionManageClusters   Permission = "clusters:manage"
-	PermissionManageUsers      Permission = "users:manage"
-	PermissionApproveRequests  Permission = "requests:approve"
-	PermissionCreateRequests   Permission = "requests:create"
-	PermissionViewRequests     Permission = "requests:view"
-	PermissionViewAuditLog     Permission = "audit:view"
+	PermissionManageClusters  Permission = "clusters:manage"
+	PermissionManageUsers     Permission = "users:manage"
+	PermissionApproveRequests Permission = "requests:approve"
+	PermissionCreateRequests  Permission = "requests:create"
+	PermissionViewRequests    Permission = "requests:view"
+	PermissionViewAuditLog    Permission = "audit:view"
 )
 
 var rolePermissions = map[Role][]Permission{
@@ -46,9 +46,9 @@ var rolePermissions = map[Role][]Permission{
 }
 
 type RBAC struct {
-	mu       sync.RWMutex
-	users    map[string]Role
-	admins   []string
+	mu     sync.RWMutex
+	users  map[string]Role
+	admins []string
 }
 
 func NewRBAC(adminUsers []string) *RBAC {
@@ -56,11 +56,11 @@ func NewRBAC(adminUsers []string) *RBAC {
 		users:  make(map[string]Role),
 		admins: adminUsers,
 	}
-	
+
 	for _, admin := range adminUsers {
 		rbac.users[admin] = RoleAdmin
 	}
-	
+
 	return rbac
 }
 
@@ -73,7 +73,7 @@ func (r *RBAC) SetUserRole(userID string, role Role) {
 func (r *RBAC) GetUserRole(userID string) Role {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	if role, exists := r.users[userID]; exists {
 		return role
 	}
@@ -86,7 +86,7 @@ func (r *RBAC) UserHasPermission(userID string, permission Permission) bool {
 	if !exists {
 		return false
 	}
-	
+
 	for _, p := range permissions {
 		if p == permission {
 			return true

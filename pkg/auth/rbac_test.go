@@ -25,7 +25,7 @@ func TestSetUserRole(t *testing.T) {
 	userID := "user123"
 
 	rbac.SetUserRole(userID, RoleApprover)
-	
+
 	if role := rbac.GetUserRole(userID); role != RoleApprover {
 		t.Errorf("Expected role %s, got %s", RoleApprover, role)
 	}

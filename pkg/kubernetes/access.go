@@ -8,8 +8,8 @@ import (
 
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 	ekstypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
-	ststypes "github.com/aws/aws-sdk-go-v2/service/sts/types" 
-	"github.com/rebelopsio/jit-bot/pkg/aws" 
+	ststypes "github.com/aws/aws-sdk-go-v2/service/sts/types"
+	"github.com/rebelopsio/jit-bot/pkg/aws"
 	"github.com/rebelopsio/jit-bot/pkg/models"
 )
 
@@ -20,13 +20,13 @@ type AccessManager struct {
 }
 
 type GrantAccessRequest struct {
-	ClusterAccess  *models.ClusterAccess
-	Cluster        *models.Cluster
-	UserEmail      string
-	Permissions    []string
-	Namespaces     []string
-	JITRoleArn     string
-	AssumeRoleArn  string
+	ClusterAccess *models.ClusterAccess
+	Cluster       *models.Cluster
+	UserEmail     string
+	Permissions   []string
+	Namespaces    []string
+	JITRoleArn    string
+	AssumeRoleArn string
 }
 
 type AccessCredentials struct {
@@ -77,18 +77,18 @@ func (am *AccessManager) GrantAccess(ctx context.Context, req GrantAccessRequest
 	}
 
 	// Step 2: Create EKS access entry
-	principalArn := fmt.Sprintf("arn:aws:sts::%s:assumed-role/%s/%s", 
-		req.Cluster.AWSAccount, 
-		extractRoleName(req.JITRoleArn), 
+	principalArn := fmt.Sprintf("arn:aws:sts::%s:assumed-role/%s/%s",
+		req.Cluster.AWSAccount,
+		extractRoleName(req.JITRoleArn),
 		sessionName)
 
 	username := fmt.Sprintf("jit:%s", req.ClusterAccess.UserID)
-	
-	err = am.eksService.CreateJITAccessEntry(ctx, 
-		req.Cluster.Name, 
-		principalArn, 
-		username, 
-		req.Permissions, 
+
+	err = am.eksService.CreateJITAccessEntry(ctx,
+		req.Cluster.Name,
+		principalArn,
+		username,
+		req.Permissions,
 		req.Namespaces)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create EKS access entry: %w", err)

@@ -41,7 +41,7 @@ func main() {
 	var enableTracing bool
 	var tracingExporter string
 	var tracingEndpoint string
-	
+
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -53,7 +53,7 @@ func main() {
 	flag.BoolVar(&enableTracing, "enable-tracing", false, "Enable OpenTelemetry tracing.")
 	flag.StringVar(&tracingExporter, "tracing-exporter", "jaeger", "Tracing exporter (jaeger, otlp).")
 	flag.StringVar(&tracingEndpoint, "tracing-endpoint", "", "Tracing endpoint URL.")
-	
+
 	opts := zap.Options{
 		Development: true,
 	}
@@ -79,7 +79,7 @@ func main() {
 
 	monitor := monitoring.NewMonitor(monitoringConfig)
 	ctx := context.Background()
-	
+
 	if err := monitor.Start(ctx); err != nil {
 		setupLog.Error(err, "unable to start monitoring")
 		os.Exit(1)
@@ -133,7 +133,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "JITAccessRequest")
 		os.Exit(1)
 	}
-	
+
 	if err = (&controller.JITAccessJobReconciler{
 		Client:        mgr.GetClient(),
 		Scheme:        mgr.GetScheme(),

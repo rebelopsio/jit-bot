@@ -161,7 +161,7 @@ func (r *JITAccessJobReconciler) handleCreatingJob(ctx context.Context, job *JIT
 	// Update job status
 	job.Status.Phase = JobPhaseActive
 	job.Status.AccessEntry = &JobAccessEntry{
-		PrincipalArn: "arn:aws:sts::" + job.Spec.TargetCluster.AWSAccount + ":assumed-role/JITAccessRole/" + 
+		PrincipalArn: "arn:aws:sts::" + job.Spec.TargetCluster.AWSAccount + ":assumed-role/JITAccessRole/" +
 			fmt.Sprintf("jit-%s-%s-%d", accessReq.Spec.UserID, job.Spec.TargetCluster.Name, time.Now().Unix()),
 		SessionName: fmt.Sprintf("jit-%s-%s", accessReq.Spec.UserID, job.Spec.TargetCluster.Name),
 		CredentialsSecretRef: &ObjectReference{
@@ -188,7 +188,7 @@ func (r *JITAccessJobReconciler) handleCreatingJob(ctx context.Context, job *JIT
 	}
 
 	log.Info("Successfully granted JIT access", "user", accessReq.Spec.UserID, "cluster", job.Spec.TargetCluster.Name)
-	
+
 	// Check expiry periodically
 	return ctrl.Result{RequeueAfter: time.Minute * 5}, nil
 }
@@ -230,7 +230,7 @@ func (r *JITAccessJobReconciler) handleExpiringJob(ctx context.Context, job *JIT
 		// Revoke access
 		clusterAccess := r.convertToClusterAccess(&accessReq)
 		cluster := r.convertToCluster(&accessReq.Spec.TargetCluster)
-		
+
 		if err := r.AccessManager.RevokeAccess(ctx, clusterAccess, cluster, job.Spec.JITRoleArn); err != nil {
 			log.Error(err, "failed to revoke access")
 			// Don't fail the job, just log the error
@@ -291,8 +291,8 @@ func (r *JITAccessJobReconciler) createCredentialsSecret(job *JITAccessJob, cred
 			Name:      fmt.Sprintf("jit-credentials-%s", job.Name),
 			Namespace: job.Namespace,
 			Labels: map[string]string{
-				"jit.rebelops.io/job":     job.Name,
-				"jit.rebelops.io/type":    "credentials",
+				"jit.rebelops.io/job":  job.Name,
+				"jit.rebelops.io/type": "credentials",
 			},
 		},
 		Type: corev1.SecretTypeOpaque,
@@ -313,8 +313,8 @@ func (r *JITAccessJobReconciler) createKubeConfigSecret(job *JITAccessJob, kubeC
 			Name:      fmt.Sprintf("jit-kubeconfig-%s", job.Name),
 			Namespace: job.Namespace,
 			Labels: map[string]string{
-				"jit.rebelops.io/job":     job.Name,
-				"jit.rebelops.io/type":    "kubeconfig",
+				"jit.rebelops.io/job":  job.Name,
+				"jit.rebelops.io/type": "kubeconfig",
 			},
 		},
 		Type: corev1.SecretTypeOpaque,
@@ -334,7 +334,7 @@ func (r *JITAccessJobReconciler) setJobCondition(job *JITAccessJob, condition me
 			return
 		}
 	}
-	
+
 	// Add new condition
 	job.Status.Conditions = append(job.Status.Conditions, condition)
 }

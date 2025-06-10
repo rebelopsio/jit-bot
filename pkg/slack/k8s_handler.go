@@ -76,14 +76,14 @@ func (h *K8sCommandHandler) HandleRequestCommand(ctx context.Context, cmd SlackC
 			Name:      fmt.Sprintf("jit-%s-%d", cmd.UserID, time.Now().Unix()),
 			Namespace: h.namespace,
 			Labels: map[string]string{
-				"jit.rebelops.io/user":     cmd.UserID,
-				"jit.rebelops.io/cluster":  clusterName,
-				"jit.rebelops.io/channel":  cmd.ChannelID,
+				"jit.rebelops.io/user":    cmd.UserID,
+				"jit.rebelops.io/cluster": clusterName,
+				"jit.rebelops.io/channel": cmd.ChannelID,
 			},
 		},
 		Spec: controller.JITAccessRequestSpec{
-			UserID:       cmd.UserID,
-			UserEmail:    fmt.Sprintf("%s@company.com", cmd.UserName), // This should come from user profile
+			UserID:    cmd.UserID,
+			UserEmail: fmt.Sprintf("%s@company.com", cmd.UserName), // This should come from user profile
 			TargetCluster: controller.TargetCluster{
 				Name:       clusterName,
 				AWSAccount: h.getClusterAccount(clusterName),
@@ -221,7 +221,7 @@ func (h *K8sCommandHandler) getClusterAccount(clusterName string) string {
 		"staging-east-1": "123456789012",
 		"dev-west-2":     "987654321098",
 	}
-	
+
 	if account, exists := clusterConfigs[clusterName]; exists {
 		return account
 	}
@@ -235,7 +235,7 @@ func (h *K8sCommandHandler) getClusterRegion(clusterName string) string {
 		"staging-east-1": "us-east-1",
 		"dev-west-2":     "us-west-2",
 	}
-	
+
 	if region, exists := clusterConfigs[clusterName]; exists {
 		return region
 	}
@@ -247,13 +247,13 @@ func (h *K8sCommandHandler) getRequiredApprovers(clusterName string, permissions
 	if strings.Contains(clusterName, "prod") {
 		return []string{"platform-team", "sre-team"}
 	}
-	
+
 	// Check for elevated permissions
 	for _, perm := range permissions {
 		if perm == "admin" || perm == "cluster-admin" {
 			return []string{"platform-team"}
 		}
 	}
-	
+
 	return []string{} // No approval required for basic access to non-prod
 }

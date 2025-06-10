@@ -51,7 +51,7 @@ func (m *SlackMiddleware) VerifyRequest(next http.Handler) http.Handler {
 		r.Body = io.NopCloser(strings.NewReader(string(body)))
 
 		baseString := fmt.Sprintf("v0:%s:%s", timestamp, string(body))
-		
+
 		h := hmac.New(sha256.New, []byte(m.signingSecret))
 		h.Write([]byte(baseString))
 		computedSignature := "v0=" + hex.EncodeToString(h.Sum(nil))

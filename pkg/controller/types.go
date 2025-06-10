@@ -226,12 +226,12 @@ type JITAccessJobStatus struct {
 type JobPhase string
 
 const (
-	JobPhasePending    JobPhase = "Pending"
-	JobPhaseCreating   JobPhase = "Creating"
-	JobPhaseActive     JobPhase = "Active"
-	JobPhaseExpiring   JobPhase = "Expiring"
-	JobPhaseCompleted  JobPhase = "Completed"
-	JobPhaseFailed     JobPhase = "Failed"
+	JobPhasePending   JobPhase = "Pending"
+	JobPhaseCreating  JobPhase = "Creating"
+	JobPhaseActive    JobPhase = "Active"
+	JobPhaseExpiring  JobPhase = "Expiring"
+	JobPhaseCompleted JobPhase = "Completed"
+	JobPhaseFailed    JobPhase = "Failed"
 )
 
 type JobAccessEntry struct {

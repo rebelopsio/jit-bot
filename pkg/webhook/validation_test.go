@@ -366,7 +366,7 @@ func TestJITAccessRequestValidator_Handle(t *testing.T) {
 			scheme := runtime.NewScheme()
 			err := controller.AddToScheme(scheme)
 			require.NoError(t, err)
-			
+
 			validator := &JITAccessRequestValidator{
 				decoder: admission.NewDecoder(scheme),
 			}
@@ -374,7 +374,7 @@ func TestJITAccessRequestValidator_Handle(t *testing.T) {
 			// Encode request to JSON
 			requestJSON, err := json.Marshal(tt.request)
 			require.NoError(t, err)
-			
+
 			// Create admission request
 			req := admission.Request{
 				AdmissionRequest: admissionv1.AdmissionRequest{
@@ -389,7 +389,7 @@ func TestJITAccessRequestValidator_Handle(t *testing.T) {
 			resp := validator.Handle(ctx, req)
 
 			assert.Equal(t, tt.wantAllowed, resp.Allowed, "Expected allowed=%v, got=%v", tt.wantAllowed, resp.Allowed)
-			
+
 			if !tt.wantAllowed && tt.wantMessage != "" {
 				assert.Contains(t, resp.Result.Message, tt.wantMessage, "Expected message to contain '%s', got '%s'", tt.wantMessage, resp.Result.Message)
 			}
@@ -453,7 +453,7 @@ func TestValidateDuration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validateDuration(tt.duration)
-			
+
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errMsg != "" {
@@ -516,7 +516,7 @@ func TestValidatePermissions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validatePermissions(tt.permissions)
-			
+
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errMsg != "" {
@@ -590,7 +590,7 @@ func TestValidateClusterConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validateCluster(tt.config)
-			
+
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errMsg != "" {
@@ -655,7 +655,7 @@ func TestValidateReason(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validateReason(tt.reason)
-			
+
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errMsg != "" {
@@ -717,7 +717,7 @@ func TestValidateNamespaces(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validateNamespaces(tt.namespaces, []string{"view"})
-			
+
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errMsg != "" {
@@ -774,7 +774,7 @@ func TestValidateApprovers(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validateApprovers(tt.approvers)
-			
+
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errMsg != "" {
@@ -833,7 +833,7 @@ func TestParseDuration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := parseDuration(tt.duration)
-			
+
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {

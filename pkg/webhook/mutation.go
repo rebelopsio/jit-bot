@@ -145,7 +145,7 @@ func (m *JITAccessRequestMutator) injectMetadata(req *controller.JITAccessReques
 	// Add user metadata to labels
 	req.Labels["jit.rebelops.io/user"] = req.Spec.UserID
 	req.Labels["jit.rebelops.io/cluster"] = req.Spec.TargetCluster.Name
-	
+
 	// Add environment label based on cluster name
 	env := determineEnvironment(req.Spec.TargetCluster.Name)
 	req.Labels["jit.rebelops.io/environment"] = env
@@ -166,7 +166,7 @@ func (m *JITAccessRequestMutator) setApprovers(req *controller.JITAccessRequest)
 	// Production clusters always require approval
 	if env == "production" {
 		approvers = append(approvers, "platform-team", "sre-team")
-		
+
 		// Additional approval for elevated permissions in prod
 		if hasElevatedPerms {
 			approvers = append(approvers, "security-team")

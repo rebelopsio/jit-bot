@@ -14,12 +14,12 @@ import (
 func SetupWebhookWithManager(mgr ctrl.Manager) error {
 	// Setup webhook server
 	hookServer := mgr.GetWebhookServer()
-	
+
 	// Register validation webhook for JITAccessRequest
 	validator := &JITAccessRequestValidator{
 		Client: mgr.GetClient(),
 	}
-	hookServer.Register("/validate-jit-rebelops-io-v1alpha1-jitaccessrequest", 
+	hookServer.Register("/validate-jit-rebelops-io-v1alpha1-jitaccessrequest",
 		&webhook.Admission{Handler: validator})
 
 	// Register mutation webhook for JITAccessRequest
@@ -38,7 +38,6 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 	return nil
 }
-
 
 // SetupCRDValidation sets up OpenAPI schema validation in CRDs
 func SetupCRDValidation(scheme *runtime.Scheme) error {

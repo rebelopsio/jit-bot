@@ -17,14 +17,14 @@ type EKSService struct {
 }
 
 type AccessEntry struct {
-	ClusterName      string
-	PrincipalArn     string
-	Username         string
-	Groups           []string
-	AccessPolicies   []AccessPolicy
-	CreatedAt        time.Time
-	ModifiedAt       time.Time
-	Tags             map[string]string
+	ClusterName    string
+	PrincipalArn   string
+	Username       string
+	Groups         []string
+	AccessPolicies []AccessPolicy
+	CreatedAt      time.Time
+	ModifiedAt     time.Time
+	Tags           map[string]string
 }
 
 type AccessPolicy struct {
@@ -184,7 +184,7 @@ const (
 func (e *EKSService) CreateJITAccessEntry(ctx context.Context, clusterName, principalArn, username string, permissions []string, namespaces []string) error {
 	// Determine appropriate policies based on permissions
 	var accessPolicies []AccessPolicy
-	
+
 	for _, permission := range permissions {
 		switch permission {
 		case "view":
@@ -199,7 +199,7 @@ func (e *EKSService) CreateJITAccessEntry(ctx context.Context, clusterName, prin
 			accessPolicies = append(accessPolicies, AccessPolicy{
 				PolicyArn: EKSEditorPolicy,
 				AccessScope: AccessScope{
-					Type:       "namespace", 
+					Type:       "namespace",
 					Namespaces: namespaces,
 				},
 			})

@@ -446,7 +446,7 @@ func TestMetricsRegistration(t *testing.T) {
 	// This is implicitly tested by the other tests, but we can also check explicitly
 
 	registry := prometheus.NewRegistry()
-	
+
 	// Register all metrics with the test registry
 	err := registry.Register(accessRequestsTotal)
 	assert.NoError(t, err, "accessRequestsTotal should register successfully")

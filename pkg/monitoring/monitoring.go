@@ -29,7 +29,7 @@ type Config struct {
 
 // Monitor manages metrics and tracing
 type Monitor struct {
-	config     Config
+	config         Config
 	tracerProvider *trace.TracerProvider
 	metricsServer  *http.Server
 	healthServer   *http.Server
@@ -109,7 +109,7 @@ func (m *Monitor) Stop(ctx context.Context) error {
 func (m *Monitor) startMetricsServer() error {
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
-	
+
 	m.metricsServer = &http.Server{
 		Addr:    fmt.Sprintf(":%d", m.config.MetricsPort),
 		Handler: mux,
@@ -126,13 +126,13 @@ func (m *Monitor) startMetricsServer() error {
 
 func (m *Monitor) startHealthServer() error {
 	mux := http.NewServeMux()
-	
+
 	// Add health check endpoints
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	})
-	
+
 	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		// Check if all components are ready
 		if m.isSystemReady() {
@@ -184,7 +184,7 @@ func (m *Monitor) isSystemReady() bool {
 func (m *Monitor) TrackAccessRequest(ctx context.Context, operation, userID, cluster, environment string, permissions []string, fn func(context.Context) error) error {
 	// Record metrics
 	metrics.RecordAccessRequest(cluster, userID, environment, permissions)
-	
+
 	// Add tracing
 	return telemetry.InstrumentAccessRequest(ctx, operation, userID, cluster, fn)
 }
@@ -192,27 +192,27 @@ func (m *Monitor) TrackAccessRequest(ctx context.Context, operation, userID, clu
 // TrackWebhookRequest tracks a webhook request with both metrics and tracing
 func (m *Monitor) TrackWebhookRequest(ctx context.Context, webhookType, operation string, fn func(context.Context) error) error {
 	start := time.Now()
-	
+
 	// Add tracing
 	err := telemetry.InstrumentWebhook(ctx, webhookType, operation, fn)
-	
+
 	// Record metrics
 	status := "success"
 	if err != nil {
 		status = "error"
 	}
 	metrics.RecordWebhookRequest(webhookType, operation, status, time.Since(start))
-	
+
 	return err
 }
 
 // TrackAWSCall tracks an AWS API call with both metrics and tracing
 func (m *Monitor) TrackAWSCall(ctx context.Context, service, operation, region string, fn func(context.Context) error) error {
 	start := time.Now()
-	
+
 	// Add tracing
 	err := telemetry.InstrumentAWSCall(ctx, service, operation, region, fn)
-	
+
 	// Record metrics
 	status := "success"
 	if err != nil {
@@ -222,38 +222,38 @@ func (m *Monitor) TrackAWSCall(ctx context.Context, service, operation, region s
 		metrics.RecordAWSAPIError(service, operation, "unknown", region)
 	}
 	metrics.RecordAWSAPICall(service, operation, status, region, time.Since(start))
-	
+
 	return err
 }
 
 // TrackSlackCommand tracks a Slack command with both metrics and tracing
 func (m *Monitor) TrackSlackCommand(ctx context.Context, command, userID, channelID string, fn func(context.Context) error) error {
 	start := time.Now()
-	
+
 	// Add tracing
 	err := telemetry.InstrumentSlackCommand(ctx, command, fn)
-	
+
 	// Record metrics
 	status := "success"
 	if err != nil {
 		status = "error"
 	}
 	metrics.RecordSlackCommand(command, userID, channelID, status, time.Since(start))
-	
+
 	return err
 }
 
 // TrackControllerReconcile tracks a controller reconciliation with both metrics and tracing
 func (m *Monitor) TrackControllerReconcile(ctx context.Context, controller string, fn func(context.Context) error) error {
 	start := time.Now()
-	
+
 	// Add tracing
 	ctx, span := telemetry.StartControllerSpan(ctx, controller, "reconcile")
 	defer span.End()
-	
+
 	err := fn(ctx)
 	duration := time.Since(start)
-	
+
 	// Record metrics
 	result := "success"
 	if err != nil {
@@ -263,9 +263,9 @@ func (m *Monitor) TrackControllerReconcile(ctx context.Context, controller strin
 	} else {
 		telemetry.SetSpanStatus(span, nil, "Reconciliation succeeded")
 	}
-	
+
 	metrics.RecordControllerReconcile(controller, result, duration)
-	
+
 	return err
 }
 
@@ -288,11 +288,11 @@ func (m *Monitor) RecordPrivilegeEscalation(userID, fromPerm, toPerm, cluster st
 func (m *Monitor) HTTPMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		
+
 		// Extract trace context from headers
 		ctx := telemetry.ExtractTraceContext(r.Context(), extractHeadersMap(r.Header))
 		r = r.WithContext(ctx)
-		
+
 		// Start span
 		ctx, span := telemetry.StartSpan(ctx, fmt.Sprintf("HTTP %s %s", r.Method, r.URL.Path),
 			attribute.String("http.method", r.Method),
@@ -300,20 +300,20 @@ func (m *Monitor) HTTPMiddleware(next http.Handler) http.Handler {
 			attribute.String("http.user_agent", r.UserAgent()),
 		)
 		defer span.End()
-		
+
 		// Wrap response writer to capture status code
 		wrapped := &responseWriter{ResponseWriter: w, statusCode: 200}
-		
+
 		// Call next handler
 		next.ServeHTTP(wrapped, r.WithContext(ctx))
-		
+
 		// Record metrics and span attributes
 		duration := time.Since(start)
 		span.SetAttributes(
 			attribute.Int("http.status_code", wrapped.statusCode),
 			attribute.Int64("http.duration_ms", duration.Milliseconds()),
 		)
-		
+
 		if wrapped.statusCode >= 400 {
 			telemetry.SetSpanStatus(span, nil, fmt.Sprintf("HTTP %d", wrapped.statusCode))
 		} else {

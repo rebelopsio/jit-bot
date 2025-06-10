@@ -70,7 +70,7 @@ func (r *JITAccessRequestReconciler) handlePendingRequest(ctx context.Context, j
 				Message:            "JIT access request has been submitted",
 			},
 		}
-		
+
 		if err := r.Status().Update(ctx, jitReq); err != nil {
 			log.Error(err, "unable to update JITAccessRequest status")
 			return ctrl.Result{}, err
@@ -82,7 +82,7 @@ func (r *JITAccessRequestReconciler) handlePendingRequest(ctx context.Context, j
 	if r.shouldAutoApprove(jitReq) || r.hasRequiredApprovals(jitReq) {
 		jitReq.Status.Phase = AccessPhaseApproved
 		jitReq.Status.Message = "Request approved"
-		
+
 		// Add approval condition
 		r.setCondition(jitReq, metav1.Condition{
 			Type:               "Approved",
@@ -108,7 +108,7 @@ func (r *JITAccessRequestReconciler) handleApprovedRequest(ctx context.Context, 
 
 	// Create JITAccessJob to handle the actual access provisioning
 	job := r.createJITAccessJob(jitReq)
-	
+
 	// Set owner reference for cleanup
 	if err := controllerutil.SetControllerReference(jitReq, job, r.Scheme); err != nil {
 		log.Error(err, "unable to set owner reference")
@@ -125,7 +125,7 @@ func (r *JITAccessRequestReconciler) handleApprovedRequest(ctx context.Context, 
 	// Update status to active
 	jitReq.Status.Phase = AccessPhaseActive
 	jitReq.Status.Message = "Access provisioning in progress"
-	
+
 	r.setCondition(jitReq, metav1.Condition{
 		Type:               "Provisioning",
 		Status:             metav1.ConditionTrue,
@@ -150,7 +150,7 @@ func (r *JITAccessRequestReconciler) handleActiveRequest(ctx context.Context, ji
 	if r.isRequestExpired(jitReq) {
 		jitReq.Status.Phase = AccessPhaseExpired
 		jitReq.Status.Message = "Access has expired"
-		
+
 		r.setCondition(jitReq, metav1.Condition{
 			Type:               "Expired",
 			Status:             metav1.ConditionTrue,
@@ -183,14 +183,14 @@ func (r *JITAccessRequestReconciler) shouldAutoApprove(jitReq *JITAccessRequest)
 	// - Requested permissions
 	// - Target cluster policies
 	// - Time restrictions
-	
+
 	// For now, auto-approve "view" permissions for known users
 	if len(jitReq.Spec.Permissions) == 1 && jitReq.Spec.Permissions[0] == "view" {
 		if r.RBAC.UserHasPermission(jitReq.Spec.UserID, auth.PermissionCreateRequests) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -238,12 +238,12 @@ func (r *JITAccessRequestReconciler) createJITAccessJob(jitReq *JITAccessRequest
 				Name:      jitReq.Name,
 				Namespace: jitReq.Namespace,
 			},
-			TargetCluster:   jitReq.Spec.TargetCluster,
-			Duration:        jitReq.Spec.Duration,
-			JITRoleArn:      r.getJITRoleArn(jitReq.Spec.TargetCluster),
-			Permissions:     jitReq.Spec.Permissions,
-			Namespaces:      jitReq.Spec.Namespaces,
-			CleanupPolicy:   CleanupPolicyOnExpiry,
+			TargetCluster: jitReq.Spec.TargetCluster,
+			Duration:      jitReq.Spec.Duration,
+			JITRoleArn:    r.getJITRoleArn(jitReq.Spec.TargetCluster),
+			Permissions:   jitReq.Spec.Permissions,
+			Namespaces:    jitReq.Spec.Namespaces,
+			CleanupPolicy: CleanupPolicyOnExpiry,
 		},
 	}
 }
@@ -295,7 +295,7 @@ func (r *JITAccessRequestReconciler) setCondition(jitReq *JITAccessRequest, cond
 			return
 		}
 	}
-	
+
 	// Add new condition
 	jitReq.Status.Conditions = append(jitReq.Status.Conditions, condition)
 }

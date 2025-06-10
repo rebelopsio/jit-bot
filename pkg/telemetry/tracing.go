@@ -30,11 +30,11 @@ var (
 
 // TracingConfig holds configuration for tracing
 type TracingConfig struct {
-	Enabled     bool   `yaml:"enabled" json:"enabled"`
-	Exporter    string `yaml:"exporter" json:"exporter"` // "jaeger", "otlp", "console"
-	Endpoint    string `yaml:"endpoint" json:"endpoint"`
-	ServiceName string `yaml:"serviceName" json:"serviceName"`
-	Environment string `yaml:"environment" json:"environment"`
+	Enabled     bool    `yaml:"enabled" json:"enabled"`
+	Exporter    string  `yaml:"exporter" json:"exporter"` // "jaeger", "otlp", "console"
+	Endpoint    string  `yaml:"endpoint" json:"endpoint"`
+	ServiceName string  `yaml:"serviceName" json:"serviceName"`
+	Environment string  `yaml:"environment" json:"environment"`
 	SampleRate  float64 `yaml:"sampleRate" json:"sampleRate"`
 }
 
@@ -104,7 +104,7 @@ func createJaegerExporter(endpoint string) (trace.SpanExporter, error) {
 	if endpoint == "" {
 		endpoint = "http://localhost:14268/api/traces"
 	}
-	
+
 	return jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(endpoint)))
 }
 

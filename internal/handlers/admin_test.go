@@ -16,16 +16,16 @@ import (
 func TestNewAdminHandler(t *testing.T) {
 	rbac := auth.NewRBAC([]string{"admin1"})
 	memStore := store.NewMemoryStore()
-	
+
 	handler := NewAdminHandler(rbac, memStore)
 	if handler == nil {
 		t.Fatal("NewAdminHandler returned nil")
 	}
-	
+
 	if handler.rbac != rbac {
 		t.Error("RBAC not set correctly")
 	}
-	
+
 	if handler.store != memStore {
 		t.Error("Store not set correctly")
 	}
@@ -51,7 +51,7 @@ func TestCreateCluster(t *testing.T) {
 	req := httptest.NewRequest("POST", "/api/v1/clusters", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Slack-User-ID", "admin1")
-	
+
 	rr := httptest.NewRecorder()
 	handler.CreateCluster(rr, req)
 
@@ -84,11 +84,11 @@ func TestCreateClusterUnauthorized(t *testing.T) {
 
 	cluster := models.Cluster{Name: "test-cluster"}
 	body, _ := json.Marshal(cluster)
-	
+
 	// Test without user ID
 	req := httptest.NewRequest("POST", "/api/v1/clusters", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	rr := httptest.NewRecorder()
 	handler.CreateCluster(rr, req)
 
@@ -100,7 +100,7 @@ func TestCreateClusterUnauthorized(t *testing.T) {
 	req = httptest.NewRequest("POST", "/api/v1/clusters", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Slack-User-ID", "requester1")
-	
+
 	rr = httptest.NewRecorder()
 	handler.CreateCluster(rr, req)
 
@@ -126,13 +126,13 @@ func TestListClusters(t *testing.T) {
 		Name:      "cluster2",
 		CreatedBy: "admin1",
 	}
-	
+
 	memStore.CreateCluster(cluster1)
 	memStore.CreateCluster(cluster2)
 
 	req := httptest.NewRequest("GET", "/api/v1/clusters", nil)
 	req.Header.Set("X-Slack-User-ID", "requester1")
-	
+
 	rr := httptest.NewRecorder()
 	handler.ListClusters(rr, req)
 
@@ -167,11 +167,11 @@ func TestUpdateCluster(t *testing.T) {
 	// Update cluster
 	cluster.DisplayName = "Updated Test Cluster"
 	body, _ := json.Marshal(cluster)
-	
+
 	req := httptest.NewRequest("PUT", "/api/v1/clusters", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Slack-User-ID", "admin1")
-	
+
 	rr := httptest.NewRecorder()
 	handler.UpdateCluster(rr, req)
 
@@ -204,7 +204,7 @@ func TestDeleteCluster(t *testing.T) {
 
 	req := httptest.NewRequest("DELETE", "/api/v1/clusters?id=test-cluster", nil)
 	req.Header.Set("X-Slack-User-ID", "admin1")
-	
+
 	rr := httptest.NewRecorder()
 	handler.DeleteCluster(rr, req)
 
@@ -226,7 +226,7 @@ func TestDeleteClusterMissingID(t *testing.T) {
 
 	req := httptest.NewRequest("DELETE", "/api/v1/clusters", nil)
 	req.Header.Set("X-Slack-User-ID", "admin1")
-	
+
 	rr := httptest.NewRecorder()
 	handler.DeleteCluster(rr, req)
 
@@ -252,7 +252,7 @@ func TestManageUser(t *testing.T) {
 	req := httptest.NewRequest("POST", "/api/v1/users/role", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Slack-User-ID", "admin1")
-	
+
 	rr := httptest.NewRecorder()
 	handler.ManageUser(rr, req)
 
@@ -293,7 +293,7 @@ func TestManageUserUnauthorized(t *testing.T) {
 	req := httptest.NewRequest("POST", "/api/v1/users/role", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Slack-User-ID", "approver1") // Approver trying to manage users
-	
+
 	rr := httptest.NewRecorder()
 	handler.ManageUser(rr, req)
 

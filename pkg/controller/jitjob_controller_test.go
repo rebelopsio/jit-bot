@@ -64,9 +64,9 @@ func TestJITAccessJobReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			// Note: accessManager removed from test data
-			expectStatus:            JobPhaseCreating,
-			expectSecretCreated:     false, // Secret created in next reconciliation cycle
-			expectRequeue:           true,
+			expectStatus:        JobPhaseCreating,
+			expectSecretCreated: false, // Secret created in next reconciliation cycle
+			expectRequeue:       true,
 			// Note: expectCreateAccessEntry removed
 		},
 		{
@@ -96,8 +96,8 @@ func TestJITAccessJobReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			// Note: accessManager removed from test data
-			expectStatus:            JobPhaseExpiring,
-			expectRequeue:           true,
+			expectStatus:  JobPhaseExpiring,
+			expectRequeue: true,
 			// Note: expectDeleteAccessEntry removed
 		},
 		{
@@ -125,10 +125,10 @@ func TestJITAccessJobReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			// Note: accessManager removed from test data
-			expectStatus:            JobPhaseCreating,
-			expectRequeue:           true,
+			expectStatus:  JobPhaseCreating,
+			expectRequeue: true,
 			// Note: expectCreateAccessEntry removed
-			expectError:             false, // Error is handled, not returned
+			expectError: false, // Error is handled, not returned
 		},
 		{
 			name: "completed job is not processed",
@@ -153,8 +153,8 @@ func TestJITAccessJobReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			// Note: accessManager removed from test data
-			expectStatus:            JobPhaseCompleted,
-			expectRequeue:           false,
+			expectStatus:  JobPhaseCompleted,
+			expectRequeue: false,
 			// Note: expectCreateAccessEntry removed
 			// Note: expectDeleteAccessEntry removed
 		},

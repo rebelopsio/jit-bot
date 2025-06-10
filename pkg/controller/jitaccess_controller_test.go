@@ -26,13 +26,13 @@ func TestJITAccessRequestReconciler_Reconcile(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name           string
-		request        *JITAccessRequest
-		existingJob    *JITAccessJob
-		expectJob      bool
-		expectStatus   AccessPhase
-		expectError    bool
-		expectRequeue  bool
+		name          string
+		request       *JITAccessRequest
+		existingJob   *JITAccessJob
+		expectJob     bool
+		expectStatus  AccessPhase
+		expectError   bool
+		expectRequeue bool
 	}{
 		{
 			name: "new pending request creates job",
@@ -59,8 +59,8 @@ func TestJITAccessRequestReconciler_Reconcile(t *testing.T) {
 					Message: "Waiting for approval",
 				},
 			},
-			expectJob:    false, // Dev environment doesn't require approval
-			expectStatus: AccessPhaseApproved,
+			expectJob:     false, // Dev environment doesn't require approval
+			expectStatus:  AccessPhaseApproved,
 			expectRequeue: true,
 		},
 		{
@@ -96,8 +96,8 @@ func TestJITAccessRequestReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			expectJob:    true,
-			expectStatus: AccessPhaseActive,
+			expectJob:     true,
+			expectStatus:  AccessPhaseActive,
 			expectRequeue: false,
 		},
 		{
@@ -121,12 +121,12 @@ func TestJITAccessRequestReconciler_Reconcile(t *testing.T) {
 					RequestedAt: metav1.Now(),
 				},
 				Status: JITAccessRequestStatus{
-					Phase:    AccessPhaseDenied,
-					Message:  "Insufficient justification for admin access",
+					Phase:   AccessPhaseDenied,
+					Message: "Insufficient justification for admin access",
 				},
 			},
-			expectJob:    false,
-			expectStatus: AccessPhaseDenied,
+			expectJob:     false,
+			expectStatus:  AccessPhaseDenied,
 			expectRequeue: false,
 		},
 		{
@@ -175,8 +175,8 @@ func TestJITAccessRequestReconciler_Reconcile(t *testing.T) {
 					Phase: JobPhaseCreating,
 				},
 			},
-			expectJob:    true,
-			expectStatus: AccessPhaseActive,
+			expectJob:     true,
+			expectStatus:  AccessPhaseActive,
 			expectRequeue: false,
 		},
 	}

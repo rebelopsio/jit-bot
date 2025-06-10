@@ -96,7 +96,7 @@ func (cs *CleanupService) cleanupClusterAccess(ctx context.Context, cluster *mod
 		// Check if access has expired
 		if cs.isAccessExpired(access) {
 			log.Printf("Cleaning up expired access for user %s, cluster %s", access.UserID, cluster.Name)
-			
+
 			if err := cs.revokeExpiredAccess(ctx, access, cluster, entryArn); err != nil {
 				log.Printf("Failed to revoke expired access: %v", err)
 			}
@@ -138,7 +138,7 @@ func (cs *CleanupService) findAccessBySession(sessionInfo *SessionInfo) (*models
 	// This is a simplified implementation
 	// In practice, you'd want to maintain a mapping between session names and access IDs
 	// or store the session name in the access record
-	
+
 	// For now, we'll try to extract the user ID from the session name
 	// Session names are in format: jit-{userID}-{clusterID}-{timestamp}
 	if sessionInfo.UserID == "" {
@@ -159,7 +159,7 @@ type SessionInfo struct {
 func extractSessionInfo(entryArn string) *SessionInfo {
 	// Extract session information from ARN like:
 	// arn:aws:sts::123456789012:assumed-role/JITAccessRole/jit-user123-cluster456-20240610-143022
-	
+
 	if !strings.Contains(entryArn, "assumed-role") {
 		return nil
 	}

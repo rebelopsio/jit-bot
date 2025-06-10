@@ -115,17 +115,17 @@ func parseDuration(duration string) (time.Duration, error) {
 	// Parse duration components using regexp
 	re := regexp.MustCompile(`(\d+)([dhms])`)
 	matches := re.FindAllStringSubmatch(duration, -1)
-	
+
 	if len(matches) == 0 {
 		return 0, fmt.Errorf("invalid duration format: %s", duration)
 	}
-	
+
 	var total time.Duration
 	for _, match := range matches {
 		value := 0
 		fmt.Sscanf(match[1], "%d", &value)
 		unit := match[2]
-		
+
 		switch unit {
 		case "d":
 			total += time.Duration(value) * 24 * time.Hour
@@ -139,7 +139,7 @@ func parseDuration(duration string) (time.Duration, error) {
 			return 0, fmt.Errorf("invalid duration unit: %s", unit)
 		}
 	}
-	
+
 	// Verify that the parsed string matches the original (no invalid parts)
 	rebuiltString := ""
 	for _, match := range matches {
@@ -148,7 +148,7 @@ func parseDuration(duration string) (time.Duration, error) {
 	if rebuiltString != duration {
 		return 0, fmt.Errorf("invalid duration format: %s", duration)
 	}
-	
+
 	return total, nil
 }
 
@@ -170,7 +170,7 @@ func validatePermissions(permissions []string) error {
 
 	for _, perm := range permissions {
 		if !validPermissions[perm] {
-			return fmt.Errorf("invalid permission '%s'. Valid permissions are: %v", 
+			return fmt.Errorf("invalid permission '%s'. Valid permissions are: %v",
 				perm, getKeys(validPermissions))
 		}
 	}
@@ -244,7 +244,7 @@ func validateReason(reason string) error {
 			return fmt.Errorf("please provide a meaningful business reason for access")
 		}
 	}
-	
+
 	return nil
 }
 
@@ -306,7 +306,7 @@ func isValidApprover(approver string) bool {
 	if strings.HasPrefix(approver, "U") && len(approver) == 11 {
 		return true
 	}
-	
+
 	// Team name format: lowercase with hyphens
 	teamRegex := regexp.MustCompile(`^[a-z][a-z0-9-]*[a-z0-9]$`)
 	return teamRegex.MatchString(approver)
@@ -334,13 +334,13 @@ func validateUserID(userID string) error {
 	if userID == "" {
 		return fmt.Errorf("user ID is required")
 	}
-	
+
 	// Slack user ID format: U followed by 10 alphanumeric characters
 	userIDRegex := regexp.MustCompile(`^U[A-Z0-9]{10}$`)
 	if !userIDRegex.MatchString(userID) {
 		return fmt.Errorf("must be a valid Slack user ID (e.g., U1234567890)")
 	}
-	
+
 	return nil
 }
 
@@ -349,13 +349,13 @@ func validateEmail(email string) error {
 	if email == "" {
 		return fmt.Errorf("email is required")
 	}
-	
+
 	// Basic email validation
 	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 	if !emailRegex.MatchString(email) {
 		return fmt.Errorf("must be a valid email address")
 	}
-	
+
 	return nil
 }
 
@@ -372,7 +372,7 @@ func validateReasonForPermissions(reason string, permissions []string) error {
 		"testing something",
 		"trying to",
 	}
-	
+
 	// Check if cluster-admin permission requires detailed justification
 	if contains(permissions, "cluster-admin") {
 		// Check for generic phrases first for cluster-admin
@@ -381,7 +381,7 @@ func validateReasonForPermissions(reason string, permissions []string) error {
 				return fmt.Errorf("cluster-admin permission requires detailed justification")
 			}
 		}
-		
+
 		if len(reason) < 50 {
 			return fmt.Errorf("cluster-admin permission requires detailed justification (at least 50 characters)")
 		}
@@ -393,7 +393,7 @@ func validateReasonForPermissions(reason string, permissions []string) error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 

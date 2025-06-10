@@ -31,13 +31,13 @@ func NewRouter(cfg *config.Config) (http.Handler, error) {
 
 	mux.HandleFunc("/health", h.Health)
 	mux.HandleFunc("/ready", h.Ready)
-	
+
 	slackMux := http.NewServeMux()
 	slackMux.HandleFunc("/slack/events", h.SlackEvents)
 	slackMux.HandleFunc("/slack/commands", commandHandler.HandleJITCommand)
-	
+
 	mux.Handle("/slack/", slackMiddleware.VerifyRequest(slackMux))
-	
+
 	mux.HandleFunc("/api/v1/clusters", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -52,7 +52,7 @@ func NewRouter(cfg *config.Config) (http.Handler, error) {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
-	
+
 	mux.HandleFunc("/api/v1/users/role", adminHandler.ManageUser)
 
 	return mux, nil
