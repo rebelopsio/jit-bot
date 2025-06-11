@@ -16,12 +16,32 @@ env:
   IMAGE_NAME_OPERATOR: ${{ github.repository }}/jit-operator
 
 jobs:
-  build-and-push:
+  # Determine which platforms to build
+  setup:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Set build matrix
+        id: set-matrix
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            # For PRs: only build amd64
+            echo 'matrix={"include":[{"platform":"linux/amd64","runner":"ubuntu-latest"}]}' >> $GITHUB_OUTPUT
+          else
+            # For main/tags: build both platforms on native runners
+            echo 'matrix={"include":[{"platform":"linux/amd64","runner":"ubuntu-latest"},{"platform":"linux/arm64","runner":"buildjet-4vcpu-ubuntu-2204-arm"}]}' >> $GITHUB_OUTPUT
+          fi
+
+  # Build images on native architecture for better performance
+  build:
+    needs: setup
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
-
+    strategy:
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -30,17 +50,27 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Extract platform suffix
+        id: platform
+        run: |
+          PLATFORM="${{ matrix.platform }}"
+          SUFFIX="${PLATFORM#linux/}"
+          echo "suffix=$SUFFIX" >> $GITHUB_OUTPUT
+
       - name: Extract metadata for server
         id: meta-server
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_SERVER }}
+          flavor: |
+            suffix=-${{ steps.platform.outputs.suffix }},onlatest=true
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -54,6 +84,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_OPERATOR }}
+          flavor: |
+            suffix=-${{ steps.platform.outputs.suffix }},onlatest=true
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -62,40 +94,109 @@ jobs:
             type=semver,pattern={{major}}
             type=sha,prefix=sha-
 
-      - name: Build and push server image
+      # Build server image
+      - name: Build server image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
-          push: true
+          platforms: ${{ matrix.platform }}
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta-server.outputs.tags }}
           labels: ${{ steps.meta-server.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.platform }}-server
+          cache-to: type=gha,mode=max,scope=${{ matrix.platform }}-server
+          provenance: false
 
-      - name: Build and push operator image
+      # Build operator image
+      - name: Build operator image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./cmd/operator/Dockerfile
-          push: true
+          platforms: ${{ matrix.platform }}
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta-operator.outputs.tags }}
           labels: ${{ steps.meta-operator.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.platform }}-operator
+          cache-to: type=gha,mode=max,scope=${{ matrix.platform }}-operator
+          provenance: false
+
+  # Create multi-arch manifest (only for main/tags)
+  create-manifest:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_SERVER }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_OPERATOR }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix=sha-
+
+      - name: Create server multi-arch manifest
+        run: |
+          TAGS=$(echo "${{ steps.meta.outputs.tags }}" | grep "${{ env.IMAGE_NAME_SERVER }}" | tr '\n' ' ')
+          for tag in $TAGS; do
+            docker buildx imagetools create -t $tag \
+              ${tag}-amd64 \
+              ${tag}-arm64
+          done
+
+      - name: Create operator multi-arch manifest
+        run: |
+          TAGS=$(echo "${{ steps.meta.outputs.tags }}" | grep "${{ env.IMAGE_NAME_OPERATOR }}" | tr '\n' ' ')
+          for tag in $TAGS; do
+            docker buildx imagetools create -t $tag \
+              ${tag}-amd64 \
+              ${tag}-arm64
+          done
 
       - name: Output image details
         run: |
-          echo "### 🐳 Built and pushed images" >> $GITHUB_STEP_SUMMARY
+          echo "### 🐳 Multi-arch Images Published" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**JIT Server:**" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.meta-server.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "**Images published with platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**JIT Operator:**" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.meta-operator.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+
+  # Summary job
+  summary:
+    if: always()
+    needs: [build, create-manifest]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build Summary
+        run: |
+          echo "### 🐳 Docker Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "✅ **Images built successfully** (validation only)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- **Platform:** linux/amd64" >> $GITHUB_STEP_SUMMARY
+            echo "- **Status:** Built but not pushed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ **Multi-arch images built and pushed**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- **Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
+            echo "- **Registry:** ghcr.io" >> $GITHUB_STEP_SUMMARY
+          fi
