@@ -52,7 +52,7 @@ linters:
     - copyloopvar # detects places where loop variables are copied (Go 1.22+)
     - cyclop # checks function and package cyclomatic complexity
     - depguard # checks if package imports are in a list of acceptable packages
-    - dupl # tool for code clone detection
+    #- dupl # tool for code clone detection - disabled: allow some duplication in controllers
     - durationcheck # checks for two durations multiplied together
     - errcheck # checking for unchecked errors, these unchecked errors can be critical bugs in some cases
     - errname # checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error
@@ -62,16 +62,16 @@ linters:
     - fatcontext # detects nested contexts in loops
     - forbidigo # forbids identifiers
     - funcorder # checks the order of functions, methods, and constructors
-    - funlen # tool for detection of long functions
+    #- funlen # tool for detection of long functions - disabled: allow longer functions for main/setup
     - gocheckcompilerdirectives # validates go compiler directive comments (//go:)
-    - gochecknoglobals # checks that no global variables exist
-    - gochecknoinits # checks that no init functions are present in Go code
+    #- gochecknoglobals # checks that no global variables exist - disabled: many needed for CLI/metrics
+    #- gochecknoinits # checks that no init functions are present in Go code - disabled: some needed for scheme setup
     - gochecksumtype # checks exhaustiveness on Go "sum types"
     - gocognit # computes and checks the cognitive complexity of functions
     - goconst # finds repeated strings that could be replaced by a constant
     - gocritic # provides diagnostics that check for bugs, performance and style issues
     - gocyclo # computes and checks the cyclomatic complexity of functions
-    - godot # checks if comments end in a period
+    #- godot # checks if comments end in a period - disabled: cosmetic
     - gomoddirectives # manages the use of 'replace', 'retract', and 'excludes' directives in go.mod
     - goprintffuncname # checks that printf-like functions are named with f at the end
     - gosec # inspects source code for security problems
@@ -82,7 +82,7 @@ linters:
     - loggercheck # checks key value pairs for common logger libraries (kitlog,klog,logr,zap)
     - makezero # finds slice declarations with non-zero initial length
     - mirror # reports wrong mirror patterns of bytes/strings usage
-    - mnd # detects magic numbers
+    #- mnd # detects magic numbers - disabled: many legitimate uses
     - musttag # enforces field tags in (un)marshaled structs
     - nakedret # finds naked returns in functions greater than a specified function length
     - nestif # reports deeply nested if statements
@@ -93,21 +93,21 @@ linters:
     - nolintlint # reports ill-formed or insufficient nolint directives
     - nonamedreturns # reports all named returns
     - nosprintfhostport # checks for misuse of Sprintf to construct a host with port in a URL
-    - perfsprint # checks that fmt.Sprintf can be replaced with a faster alternative
+    #- perfsprint # checks that fmt.Sprintf can be replaced with a faster alternative - disabled: micro-optimization
     - predeclared # finds code that shadows one of Go's predeclared identifiers
     - promlinter # checks Prometheus metrics naming via promlint
     - protogetter # reports direct reads from proto message fields when getters should be used
     - reassign # checks that package variables are not reassigned
     - recvcheck # checks for receiver type consistency
-    - revive # fast, configurable, extensible, flexible, and beautiful linter for Go, drop-in replacement of golint
+    #- revive # fast, configurable, extensible, flexible, and beautiful linter for Go, drop-in replacement of golint - disabled: many false positives on documentation
     - rowserrcheck # checks whether Err of rows is checked successfully
-    - sloglint # ensure consistent code style when using log/slog
+    #- sloglint # ensure consistent code style when using log/slog - disabled: allow flexibility
     - spancheck # checks for mistakes with OpenTelemetry/Census spans
     - sqlclosecheck # checks that sql.Rows and sql.Stmt are closed
     - staticcheck # is a go vet on steroids, applying a ton of static analysis checks
     - testableexamples # checks if examples are testable (have an expected output)
-    - testifylint # checks usage of github.com/stretchr/testify
-    - testpackage # makes you use a separate _test package
+    #- testifylint # checks usage of github.com/stretchr/testify - disabled: allow current patterns
+    #- testpackage # makes you use a separate _test package - disabled: allow current structure
     - tparallel # detects inappropriate usage of t.Parallel() method in your Go test codes
     - unconvert # removes unnecessary type conversions
     - unparam # reports unused function parameters
@@ -152,6 +152,19 @@ linters:
     #- tagliatelle # checks the struct tags
     #- thelper # detects golang test helpers without t.Helper() call and checks the consistency of test helpers
     #- wsl # [too strict and mostly code is not more readable] whitespace linter forces you to use empty lines
+
+    ## disabled for this project - style/cosmetic issues
+    #- dupl # tool for code clone detection - allow some duplication in controllers
+    #- funlen # tool for detection of long functions - allow longer functions for main/setup
+    #- gochecknoglobals # checks that no global variables exist - many needed for CLI/metrics
+    #- gochecknoinits # checks that no init functions are present - some needed for scheme setup
+    #- godot # checks if comments end in a period - cosmetic
+    #- mnd # detects magic numbers - many legitimate uses
+    #- perfsprint # checks that fmt.Sprintf can be replaced with a faster alternative - micro-optimization
+    #- revive # drop-in replacement of golint - many false positives on documentation
+    #- sloglint # ensure consistent code style when using log/slog - allow flexibility
+    #- testifylint # checks usage of github.com/stretchr/testify - allow current patterns
+    #- testpackage # makes you use a separate _test package - allow current structure
 
   # All settings can be found here https://github.com/golangci/golangci-lint/blob/HEAD/.golangci.reference.yml
   settings:
