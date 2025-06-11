@@ -1,7 +1,7 @@
 replicaCount: 2
 
 image:
-  repository: jit-bot
+  repository: ghcr.io/rebelopsio/jit-bot/jit-server
   pullPolicy: IfNotPresent
   tag: ""
 

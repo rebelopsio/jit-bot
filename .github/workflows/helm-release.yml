@@ -1,0 +1,216 @@
+name: Helm Chart Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_run:
+    workflows: ["Build and Push Docker Images"]
+    types:
+      - completed
+
+env:
+  REGISTRY: ghcr.io
+  CHART_NAME: jit-bot
+  DOCS_BRANCH: docs
+
+jobs:
+  # Only run if Docker workflow succeeded or if manually triggered
+  check-prerequisites:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+      app_version: ${{ steps.version.outputs.app_version }}
+      chart_version: ${{ steps.version.outputs.chart_version }}
+    steps:
+      - name: Check if workflow should run
+        id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            if [[ "${{ github.event.workflow_run.conclusion }}" == "success" ]]; then
+              echo "should_run=true" >> $GITHUB_OUTPUT
+            else
+              echo "should_run=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout repository
+        if: steps.check.outputs.should_run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Determine versions
+        if: steps.check.outputs.should_run == 'true'
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            # For tags, use the tag as both app and chart version
+            APP_VERSION="${{ github.ref_name }}"
+            CHART_VERSION="${{ github.ref_name }}"
+          else
+            # For main branch, use commit SHA for app version and increment chart patch version
+            APP_VERSION="${{ github.sha }}"
+            # Get current chart version and increment patch
+            CURRENT_CHART_VERSION=$(yq '.version' charts/jit-bot/Chart.yaml)
+            CHART_VERSION=$(echo $CURRENT_CHART_VERSION | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
+          fi
+          
+          echo "app_version=$APP_VERSION" >> $GITHUB_OUTPUT
+          echo "chart_version=$CHART_VERSION" >> $GITHUB_OUTPUT
+          
+          echo "App Version: $APP_VERSION"
+          echo "Chart Version: $CHART_VERSION"
+
+  helm-release:
+    needs: check-prerequisites
+    if: needs.check-prerequisites.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: read
+      pages: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'v3.13.0'
+
+      - name: Set up yq
+        uses: mikefarah/yq@master
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update chart metadata
+        run: |
+          APP_VERSION="${{ needs.check-prerequisites.outputs.app_version }}"
+          CHART_VERSION="${{ needs.check-prerequisites.outputs.chart_version }}"
+          
+          # Update Chart.yaml with new versions
+          yq -i ".version = \"$CHART_VERSION\"" charts/jit-bot/Chart.yaml
+          yq -i ".appVersion = \"$APP_VERSION\"" charts/jit-bot/Chart.yaml
+          
+          # Update values.yaml with new image repository
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            # For tags, use the tag as image tag
+            yq -i ".image.repository = \"${{ env.REGISTRY }}/${{ github.repository }}/jit-server\"" charts/jit-bot/values.yaml
+            yq -i ".image.tag = \"$APP_VERSION\"" charts/jit-bot/values.yaml
+          else
+            # For main branch, use main tag
+            yq -i ".image.repository = \"${{ env.REGISTRY }}/${{ github.repository }}/jit-server\"" charts/jit-bot/values.yaml
+            yq -i ".image.tag = \"main\"" charts/jit-bot/values.yaml
+          fi
+
+      - name: Validate Helm chart
+        run: |
+          helm lint charts/jit-bot
+          helm template test-release charts/jit-bot --debug --dry-run
+
+      - name: Package Helm chart
+        run: |
+          mkdir -p helm-charts
+          helm package charts/jit-bot --destination helm-charts/
+          echo "Chart packaged: $(ls helm-charts/)"
+
+      - name: Checkout docs branch
+        run: |
+          # Create docs branch if it doesn't exist
+          if ! git ls-remote --heads origin ${{ env.DOCS_BRANCH }} | grep -q ${{ env.DOCS_BRANCH }}; then
+            git checkout --orphan ${{ env.DOCS_BRANCH }}
+            git rm -rf .
+            echo "# Helm Chart Repository" > README.md
+            echo "" >> README.md
+            echo "This branch contains the Helm chart repository for JIT Bot." >> README.md
+            echo "" >> README.md
+            echo "## Usage" >> README.md
+            echo "" >> README.md
+            echo "\`\`\`bash" >> README.md
+            echo "helm repo add jit-bot https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/" >> README.md
+            echo "helm install my-jit-bot jit-bot/jit-bot" >> README.md
+            echo "\`\`\`" >> README.md
+            git add README.md
+            git commit -m "Initialize docs branch for Helm charts"
+            git push origin ${{ env.DOCS_BRANCH }}
+          fi
+          
+          # Switch to docs branch and pull latest
+          git checkout ${{ env.DOCS_BRANCH }}
+          git pull origin ${{ env.DOCS_BRANCH }}
+
+      - name: Copy chart package to docs branch
+        run: |
+          # Copy the packaged chart
+          cp helm-charts/*.tgz .
+          
+          # Generate or update index.yaml
+          if [ -f index.yaml ]; then
+            helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/ --merge index.yaml
+          else
+            helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+          fi
+
+      - name: Commit and push to docs branch
+        run: |
+          git add .
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Release Helm chart ${{ env.CHART_NAME }} v${{ needs.check-prerequisites.outputs.chart_version }}"
+            git push origin ${{ env.DOCS_BRANCH }}
+          fi
+
+      - name: Create GitHub Release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: helm-charts/*.tgz
+          generate_release_notes: true
+          body: |
+            ## Helm Chart Release
+            
+            **Chart Version:** ${{ needs.check-prerequisites.outputs.chart_version }}
+            **App Version:** ${{ needs.check-prerequisites.outputs.app_version }}
+            
+            ### Installation
+            
+            ```bash
+            helm repo add jit-bot https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+            helm repo update
+            helm install my-jit-bot jit-bot/jit-bot --version ${{ needs.check-prerequisites.outputs.chart_version }}
+            ```
+            
+            ### Docker Images
+            
+            - **Server:** `${{ env.REGISTRY }}/${{ github.repository }}/jit-server:${{ needs.check-prerequisites.outputs.app_version }}`
+            - **Operator:** `${{ env.REGISTRY }}/${{ github.repository }}/jit-operator:${{ needs.check-prerequisites.outputs.app_version }}`
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "### 📦 Helm Chart Released" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Chart:** ${{ env.CHART_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ needs.check-prerequisites.outputs.chart_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**App Version:** ${{ needs.check-prerequisites.outputs.app_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Repository URL:** https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Installation Commands" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "helm repo add jit-bot https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/" >> $GITHUB_STEP_SUMMARY
+          echo "helm repo update" >> $GITHUB_STEP_SUMMARY
+          echo "helm install my-jit-bot jit-bot/jit-bot --version ${{ needs.check-prerequisites.outputs.chart_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
