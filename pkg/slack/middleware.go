@@ -62,7 +62,7 @@ func (m *SlackMiddleware) VerifyRequest(next http.Handler) http.Handler {
 		}
 
 		if r.Header.Get("Content-Type") == "application/x-www-form-urlencoded" {
-			if err := r.ParseForm(); err == nil {
+			if parseErr := r.ParseForm(); parseErr == nil {
 				userID := r.FormValue("user_id")
 				userName := r.FormValue("user_name")
 				if userID != "" {

@@ -48,6 +48,30 @@ func TestClusterValidation(t *testing.T) {
 	if cluster.AWSAccount == "" {
 		t.Error("Cluster AWSAccount should not be empty")
 	}
+
+	if !cluster.Enabled {
+		t.Error("Cluster should be enabled")
+	}
+
+	if cluster.CreatedBy != "admin1" {
+		t.Errorf("Cluster CreatedBy should be admin1, got %s", cluster.CreatedBy)
+	}
+
+	if cluster.Name != "test-cluster" {
+		t.Errorf("Cluster Name should be test-cluster, got %s", cluster.Name)
+	}
+
+	if cluster.DisplayName != "Test Cluster" {
+		t.Errorf("Cluster DisplayName should be Test Cluster, got %s", cluster.DisplayName)
+	}
+
+	if cluster.Region != "us-east-1" {
+		t.Errorf("Cluster Region should be us-east-1, got %s", cluster.Region)
+	}
+
+	if cluster.Environment != "test" {
+		t.Errorf("Cluster Environment should be test, got %s", cluster.Environment)
+	}
 }
 
 func TestClusterAccessValidation(t *testing.T) {
@@ -81,6 +105,18 @@ func TestClusterAccessValidation(t *testing.T) {
 
 	if access.Reason == "" {
 		t.Error("ClusterAccess Reason should not be empty")
+	}
+
+	if access.UserEmail != "user@example.com" {
+		t.Errorf("ClusterAccess UserEmail should be user@example.com, got %s", access.UserEmail)
+	}
+
+	if access.Status != AccessStatusPending {
+		t.Errorf("ClusterAccess Status should be pending, got %s", access.Status)
+	}
+
+	if access.RequestedAt.IsZero() {
+		t.Error("ClusterAccess RequestedAt should not be zero")
 	}
 }
 

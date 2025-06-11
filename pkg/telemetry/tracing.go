@@ -29,12 +29,12 @@ var (
 
 // TracingConfig holds configuration for tracing
 type TracingConfig struct {
-	Enabled     bool    `yaml:"enabled" json:"enabled"`
-	Exporter    string  `yaml:"exporter" json:"exporter"` // "jaeger", "otlp", "console"
-	Endpoint    string  `yaml:"endpoint" json:"endpoint"`
+	Enabled     bool    `yaml:"enabled"     json:"enabled"`
+	Exporter    string  `yaml:"exporter"    json:"exporter"` // "jaeger", "otlp", "console"
+	Endpoint    string  `yaml:"endpoint"    json:"endpoint"`
 	ServiceName string  `yaml:"serviceName" json:"serviceName"`
 	Environment string  `yaml:"environment" json:"environment"`
-	SampleRate  float64 `yaml:"sampleRate" json:"sampleRate"`
+	SampleRate  float64 `yaml:"sampleRate"  json:"sampleRate"`
 }
 
 // InitTracing initializes OpenTelemetry tracing
@@ -139,12 +139,16 @@ func getEnvironment(configEnv string) string {
 
 // StartSpan starts a new span with the given name and attributes
 func StartSpan(ctx context.Context, name string, attrs ...attribute.KeyValue) (context.Context, oteltrace.Span) {
-	return tracer.Start(ctx, name, oteltrace.WithAttributes(attrs...))
+	return tracer.Start(ctx, name, oteltrace.WithAttributes(attrs...)) //nolint:spancheck // intentional API design
 }
 
 // StartAccessRequestSpan starts a span for access request operations
-func StartAccessRequestSpan(ctx context.Context, operation string, userID, cluster string) (context.Context, oteltrace.Span) {
-	return tracer.Start(ctx, fmt.Sprintf("access_request.%s", operation),
+func StartAccessRequestSpan(
+	ctx context.Context,
+	operation string,
+	userID, cluster string,
+) (context.Context, oteltrace.Span) {
+	return tracer.Start(ctx, fmt.Sprintf("access_request.%s", operation), //nolint:spancheck // intentional API design
 		oteltrace.WithAttributes(
 			attribute.String("jit.operation", operation),
 			attribute.String("jit.user_id", userID),
@@ -156,7 +160,9 @@ func StartAccessRequestSpan(ctx context.Context, operation string, userID, clust
 
 // StartWebhookSpan starts a span for webhook operations
 func StartWebhookSpan(ctx context.Context, webhookType, operation string) (context.Context, oteltrace.Span) {
-	return tracer.Start(ctx, fmt.Sprintf("webhook.%s.%s", webhookType, operation),
+	return tracer.Start( //nolint:spancheck // intentional API design
+		ctx,
+		fmt.Sprintf("webhook.%s.%s", webhookType, operation),
 		oteltrace.WithAttributes(
 			attribute.String("jit.webhook_type", webhookType),
 			attribute.String("jit.operation", operation),
@@ -167,7 +173,7 @@ func StartWebhookSpan(ctx context.Context, webhookType, operation string) (conte
 
 // StartAWSSpan starts a span for AWS operations
 func StartAWSSpan(ctx context.Context, service, operation, region string) (context.Context, oteltrace.Span) {
-	return tracer.Start(ctx, fmt.Sprintf("aws.%s.%s", service, operation),
+	return tracer.Start(ctx, fmt.Sprintf("aws.%s.%s", service, operation), //nolint:spancheck // intentional API design
 		oteltrace.WithAttributes(
 			attribute.String("aws.service", service),
 			attribute.String("aws.operation", operation),
@@ -179,7 +185,7 @@ func StartAWSSpan(ctx context.Context, service, operation, region string) (conte
 
 // StartSlackSpan starts a span for Slack operations
 func StartSlackSpan(ctx context.Context, operation, command string) (context.Context, oteltrace.Span) {
-	return tracer.Start(ctx, fmt.Sprintf("slack.%s", operation),
+	return tracer.Start(ctx, fmt.Sprintf("slack.%s", operation), //nolint:spancheck // intentional API design
 		oteltrace.WithAttributes(
 			attribute.String("slack.operation", operation),
 			attribute.String("slack.command", command),
@@ -190,7 +196,9 @@ func StartSlackSpan(ctx context.Context, operation, command string) (context.Con
 
 // StartControllerSpan starts a span for controller operations
 func StartControllerSpan(ctx context.Context, controller, operation string) (context.Context, oteltrace.Span) {
-	return tracer.Start(ctx, fmt.Sprintf("controller.%s.%s", controller, operation),
+	return tracer.Start( //nolint:spancheck // intentional API design
+		ctx,
+		fmt.Sprintf("controller.%s.%s", controller, operation),
 		oteltrace.WithAttributes(
 			attribute.String("k8s.controller", controller),
 			attribute.String("k8s.operation", operation),
@@ -256,7 +264,11 @@ func RequestAttributes(requestID, reason, duration string) []attribute.KeyValue 
 // Instrumentation helpers for common operations
 
 // InstrumentAccessRequest wraps access request operations with tracing
-func InstrumentAccessRequest(ctx context.Context, operation, userID, cluster string, fn func(context.Context) error) error {
+func InstrumentAccessRequest(
+	ctx context.Context,
+	operation, userID, cluster string,
+	fn func(context.Context) error,
+) error {
 	ctx, span := StartAccessRequestSpan(ctx, operation, userID, cluster)
 	defer span.End()
 

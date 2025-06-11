@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -22,13 +23,35 @@ import (
 // For test purposes, we'll use the real AccessManager but won't call AWS APIs in tests.
 
 func TestJITAccessJobReconciler_Reconcile(t *testing.T) {
+	scheme := setupJobTestScheme(t)
+	tests := createJobReconcileTestCases()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runJobReconcileTest(t, scheme, tt)
+		})
+	}
+}
+
+func setupJobTestScheme(t *testing.T) *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	err := clientgoscheme.AddToScheme(scheme)
 	require.NoError(t, err)
 	err = AddToScheme(scheme)
 	require.NoError(t, err)
+	return scheme
+}
 
-	tests := []struct {
+func createJobReconcileTestCases() []struct {
+	name                string
+	job                 *JITAccessJob
+	existingSecret      *corev1.Secret
+	expectStatus        JobPhase
+	expectSecretCreated bool
+	expectError         bool
+	expectRequeue       bool
+} {
+	return []struct {
 		name                string
 		job                 *JITAccessJob
 		existingSecret      *corev1.Secret
@@ -38,200 +61,231 @@ func TestJITAccessJobReconciler_Reconcile(t *testing.T) {
 		expectRequeue       bool
 	}{
 		{
-			name: "new job creates access entry and secret",
-			job: &JITAccessJob{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-job",
-					Namespace: "jit-system",
-				},
-				Spec: JITAccessJobSpec{
-					AccessRequestRef: ObjectReference{
-						Name:      "test-request",
-						Namespace: "jit-system",
-					},
-					TargetCluster: TargetCluster{
-						Name:       "dev-east-1",
-						AWSAccount: "123456789012",
-						Region:     "us-east-1",
-					},
-					Permissions: []string{"view"},
-					Duration:    "2h",
-					Namespaces:  []string{"default"},
-				},
-				Status: JITAccessJobStatus{
-					Phase: JobPhasePending,
-				},
-			},
-			// Note: accessManager removed from test data
+			name:                "new job creates access entry and secret",
+			job:                 createNewTestJob(),
 			expectStatus:        JobPhaseCreating,
-			expectSecretCreated: false, // Secret created in next reconciliation cycle
+			expectSecretCreated: false,
 			expectRequeue:       true,
-			// Note: expectCreateAccessEntry removed
 		},
 		{
-			name: "expired job deletes access entry",
-			job: &JITAccessJob{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-job",
-					Namespace: "jit-system",
-				},
-				Spec: JITAccessJobSpec{
-					AccessRequestRef: ObjectReference{
-						Name:      "test-request",
-						Namespace: "jit-system",
-					},
-					TargetCluster: TargetCluster{
-						Name:       "dev-east-1",
-						AWSAccount: "123456789012",
-						Region:     "us-east-1",
-					},
-					Permissions: []string{"view"},
-					Duration:    "1h",
-				},
-				Status: JITAccessJobStatus{
-					Phase:      JobPhaseActive,
-					StartTime:  &metav1.Time{Time: time.Now().Add(-2 * time.Hour)},
-					ExpiryTime: &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
-				},
-			},
-			// Note: accessManager removed from test data
+			name:          "expired job deletes access entry",
+			job:           createExpiredTestJob(),
 			expectStatus:  JobPhaseExpiring,
 			expectRequeue: true,
-			// Note: expectDeleteAccessEntry removed
 		},
 		{
-			name: "job with AWS access entry creation failure",
-			job: &JITAccessJob{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-job",
-					Namespace: "jit-system",
-				},
-				Spec: JITAccessJobSpec{
-					AccessRequestRef: ObjectReference{
-						Name:      "test-request",
-						Namespace: "jit-system",
-					},
-					TargetCluster: TargetCluster{
-						Name:       "prod-east-1",
-						AWSAccount: "123456789012",
-						Region:     "us-east-1",
-					},
-					Permissions: []string{"admin"},
-					Duration:    "1h",
-				},
-				Status: JITAccessJobStatus{
-					Phase: JobPhasePending,
-				},
-			},
-			// Note: accessManager removed from test data
+			name:          "job with AWS access entry creation failure",
+			job:           createFailingTestJob(),
 			expectStatus:  JobPhaseCreating,
 			expectRequeue: true,
-			// Note: expectCreateAccessEntry removed
-			expectError: false, // Error is handled, not returned
+			expectError:   false,
 		},
 		{
-			name: "completed job is not processed",
-			job: &JITAccessJob{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-job",
-					Namespace: "jit-system",
-				},
-				Spec: JITAccessJobSpec{
-					AccessRequestRef: ObjectReference{
-						Name:      "test-request",
-						Namespace: "jit-system",
-					},
-					TargetCluster: TargetCluster{
-						Name: "dev-east-1",
-					},
-					Permissions: []string{"view"},
-					Duration:    "1h",
-				},
-				Status: JITAccessJobStatus{
-					Phase: JobPhaseCompleted,
-				},
-			},
-			// Note: accessManager removed from test data
+			name:          "completed job is not processed",
+			job:           createCompletedTestJob(),
 			expectStatus:  JobPhaseCompleted,
 			expectRequeue: false,
-			// Note: expectCreateAccessEntry removed
-			// Note: expectDeleteAccessEntry removed
+		},
+	}
+}
+
+func runJobReconcileTest(t *testing.T, scheme *runtime.Scheme, tt struct {
+	name                string
+	job                 *JITAccessJob
+	existingSecret      *corev1.Secret
+	expectStatus        JobPhase
+	expectSecretCreated bool
+	expectError         bool
+	expectRequeue       bool
+}) {
+	// Create fake client with initial objects
+	objs := []client.Object{tt.job}
+	if tt.existingSecret != nil {
+		objs = append(objs, tt.existingSecret)
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(objs...).
+		WithStatusSubresource(&JITAccessJob{}).
+		Build()
+
+	// Create reconciler
+	reconciler := createJobTestReconciler(fakeClient, scheme)
+
+	// Create reconcile request
+	req := reconcile.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      tt.job.Name,
+			Namespace: tt.job.Namespace,
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create fake client with initial objects
-			objs := []client.Object{tt.job}
-			if tt.existingSecret != nil {
-				objs = append(objs, tt.existingSecret)
-			}
+	// Perform reconciliation and validate results
+	validateJobReconcileResult(t, reconciler, req, tt, fakeClient)
+}
 
-			fakeClient := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(objs...).
-				WithStatusSubresource(&JITAccessJob{}).
-				Build()
+func createJobTestReconciler(fakeClient client.Client, scheme *runtime.Scheme) *JITAccessJobReconciler {
+	accessManager, _ := kubernetes.NewAccessManager("us-east-1")
+	return &JITAccessJobReconciler{
+		Client:        fakeClient,
+		Scheme:        scheme,
+		AccessManager: accessManager,
+	}
+}
 
-			// Create reconciler
-			accessManager, _ := kubernetes.NewAccessManager("us-east-1")
-			reconciler := &JITAccessJobReconciler{
-				Client:        fakeClient,
-				Scheme:        scheme,
-				AccessManager: accessManager,
-			}
+func validateJobReconcileResult(t *testing.T, reconciler *JITAccessJobReconciler, req reconcile.Request, tt struct {
+	name                string
+	job                 *JITAccessJob
+	existingSecret      *corev1.Secret
+	expectStatus        JobPhase
+	expectSecretCreated bool
+	expectError         bool
+	expectRequeue       bool
+}, fakeClient client.Client) {
+	ctx := t.Context()
+	result, reconcileErr := reconciler.Reconcile(ctx, req)
 
-			// Create reconcile request
-			req := reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      tt.job.Name,
-					Namespace: tt.job.Namespace,
-				},
-			}
+	if tt.expectError {
+		assert.Error(t, reconcileErr)
+		return
+	}
 
-			// Perform reconciliation
-			ctx := t.Context()
-			result, err := reconciler.Reconcile(ctx, req)
+	assert.NoError(t, reconcileErr)
+	if tt.expectRequeue {
+		assert.True(t, result.RequeueAfter > 0, "Expected requeue but RequeueAfter was not set")
+	} else {
+		assert.Zero(t, result.RequeueAfter, "Expected no requeue but RequeueAfter was set")
+	}
 
-			if tt.expectError {
-				assert.Error(t, err)
-				return
-			}
+	// Check the job status was updated
+	updatedJob := &JITAccessJob{}
+	err := fakeClient.Get(ctx, req.NamespacedName, updatedJob)
+	require.NoError(t, err)
 
-			assert.NoError(t, err)
-			if tt.expectRequeue {
-				assert.True(t, result.RequeueAfter > 0, "Expected requeue but RequeueAfter was not set")
-			} else {
-				assert.Zero(t, result.RequeueAfter, "Expected no requeue but RequeueAfter was set")
-			}
+	assert.Equal(t, tt.expectStatus, updatedJob.Status.Phase)
 
-			// Check the job status was updated
-			updatedJob := &JITAccessJob{}
-			err = fakeClient.Get(ctx, req.NamespacedName, updatedJob)
-			require.NoError(t, err)
+	// Check if secret was created when expected
+	if tt.expectSecretCreated {
+		validateJobSecretCreation(t, fakeClient, ctx, tt.job)
+	}
+}
 
-			assert.Equal(t, tt.expectStatus, updatedJob.Status.Phase)
+func validateJobSecretCreation(t *testing.T, fakeClient client.Client, ctx context.Context, job *JITAccessJob) {
+	secretList := &corev1.SecretList{}
+	err := fakeClient.List(ctx, secretList, client.InNamespace(job.Namespace))
+	require.NoError(t, err)
 
-			// Check if secret was created when expected
-			if tt.expectSecretCreated {
-				secretList := &corev1.SecretList{}
-				err = fakeClient.List(ctx, secretList, client.InNamespace(tt.job.Namespace))
-				require.NoError(t, err)
+	found := false
+	for _, secret := range secretList.Items {
+		if secret.Labels["jit.rebelops.io/job"] == job.Name {
+			found = true
+			assert.Equal(t, "Opaque", string(secret.Type))
+			assert.Contains(t, secret.Data, "kubeconfig")
+			break
+		}
+	}
+	assert.True(t, found, "Expected secret to be created")
+}
 
-				found := false
-				for _, secret := range secretList.Items {
-					if secret.Labels["jit.rebelops.io/job"] == tt.job.Name {
-						found = true
-						assert.Equal(t, "Opaque", string(secret.Type))
-						assert.Contains(t, secret.Data, "kubeconfig")
-						break
-					}
-				}
-				assert.True(t, found, "Expected secret to be created")
-			}
+func createNewTestJob() *JITAccessJob {
+	return &JITAccessJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-job",
+			Namespace: "jit-system",
+		},
+		Spec: JITAccessJobSpec{
+			AccessRequestRef: ObjectReference{
+				Name:      "test-request",
+				Namespace: "jit-system",
+			},
+			TargetCluster: TargetCluster{
+				Name:       "dev-east-1",
+				AWSAccount: "123456789012",
+				Region:     "us-east-1",
+			},
+			Permissions: []string{"view"},
+			Duration:    "2h",
+			Namespaces:  []string{"default"},
+		},
+		Status: JITAccessJobStatus{
+			Phase: JobPhasePending,
+		},
+	}
+}
 
-			// Note: Removed access manager call checks since methods don't exist
-		})
+func createExpiredTestJob() *JITAccessJob {
+	return &JITAccessJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-job",
+			Namespace: "jit-system",
+		},
+		Spec: JITAccessJobSpec{
+			AccessRequestRef: ObjectReference{
+				Name:      "test-request",
+				Namespace: "jit-system",
+			},
+			TargetCluster: TargetCluster{
+				Name:       "dev-east-1",
+				AWSAccount: "123456789012",
+				Region:     "us-east-1",
+			},
+			Permissions: []string{"view"},
+			Duration:    "1h",
+		},
+		Status: JITAccessJobStatus{
+			Phase:      JobPhaseActive,
+			StartTime:  &metav1.Time{Time: time.Now().Add(-2 * time.Hour)},
+			ExpiryTime: &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
+		},
+	}
+}
+
+func createFailingTestJob() *JITAccessJob {
+	return &JITAccessJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-job",
+			Namespace: "jit-system",
+		},
+		Spec: JITAccessJobSpec{
+			AccessRequestRef: ObjectReference{
+				Name:      "test-request",
+				Namespace: "jit-system",
+			},
+			TargetCluster: TargetCluster{
+				Name:       "prod-east-1",
+				AWSAccount: "123456789012",
+				Region:     "us-east-1",
+			},
+			Permissions: []string{"admin"},
+			Duration:    "1h",
+		},
+		Status: JITAccessJobStatus{
+			Phase: JobPhasePending,
+		},
+	}
+}
+
+func createCompletedTestJob() *JITAccessJob {
+	return &JITAccessJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-job",
+			Namespace: "jit-system",
+		},
+		Spec: JITAccessJobSpec{
+			AccessRequestRef: ObjectReference{
+				Name:      "test-request",
+				Namespace: "jit-system",
+			},
+			TargetCluster: TargetCluster{
+				Name: "dev-east-1",
+			},
+			Permissions: []string{"view"},
+			Duration:    "1h",
+		},
+		Status: JITAccessJobStatus{
+			Phase: JobPhaseCompleted,
+		},
 	}
 }
 

@@ -83,12 +83,12 @@ func (cs *CleanupService) cleanupClusterAccess(ctx context.Context, cluster *mod
 		}
 
 		// Check if we have a corresponding access record
-		access, err := cs.findAccessBySession(sessionInfo)
-		if err != nil {
-			slog.Warn("No access record found for session", "session", sessionInfo.SessionName, "error", err)
+		access, findErr := cs.findAccessBySession(sessionInfo)
+		if findErr != nil {
+			slog.Warn("No access record found for session", "session", sessionInfo.SessionName, "error", findErr)
 			// Cleanup orphaned entries
-			if err := cs.accessManager.eksService.DeleteAccessEntry(ctx, cluster.Name, entryArn); err != nil {
-				slog.Error("Failed to delete orphaned access entry", "entry_arn", entryArn, "error", err)
+			if deleteErr := cs.accessManager.eksService.DeleteAccessEntry(ctx, cluster.Name, entryArn); deleteErr != nil {
+				slog.Error("Failed to delete orphaned access entry", "entry_arn", entryArn, "error", deleteErr)
 			}
 			continue
 		}
@@ -97,8 +97,8 @@ func (cs *CleanupService) cleanupClusterAccess(ctx context.Context, cluster *mod
 		if cs.isAccessExpired(access) {
 			slog.Info("Cleaning up expired access", "user", access.UserID, "cluster", cluster.Name)
 
-			if err := cs.revokeExpiredAccess(ctx, access, cluster, entryArn); err != nil {
-				slog.Error("Failed to revoke expired access", "error", err)
+			if revokeErr := cs.revokeExpiredAccess(ctx, access, cluster, entryArn); revokeErr != nil {
+				slog.Error("Failed to revoke expired access", "error", revokeErr)
 			}
 		}
 	}
@@ -115,7 +115,12 @@ func (cs *CleanupService) isAccessExpired(access *models.ClusterAccess) bool {
 	return time.Now().After(*access.ExpiresAt)
 }
 
-func (cs *CleanupService) revokeExpiredAccess(ctx context.Context, access *models.ClusterAccess, cluster *models.Cluster, entryArn string) error {
+func (cs *CleanupService) revokeExpiredAccess(
+	ctx context.Context,
+	access *models.ClusterAccess,
+	cluster *models.Cluster,
+	entryArn string,
+) error {
 	// Delete the EKS access entry
 	if err := cs.accessManager.eksService.DeleteAccessEntry(ctx, cluster.Name, entryArn); err != nil {
 		return fmt.Errorf("failed to delete access entry: %w", err)
@@ -134,16 +139,10 @@ func (cs *CleanupService) revokeExpiredAccess(ctx context.Context, access *model
 	return nil
 }
 
-func (cs *CleanupService) findAccessBySession(sessionInfo *SessionInfo) (*models.ClusterAccess, error) {
+func (cs *CleanupService) findAccessBySession(_ *SessionInfo) (*models.ClusterAccess, error) {
 	// This is a simplified implementation
 	// In practice, you'd want to maintain a mapping between session names and access IDs
 	// or store the session name in the access record
-
-	// For now, we'll try to extract the user ID from the session name
-	// Session names are in format: jit-{userID}-{clusterID}-{timestamp}
-	if sessionInfo.UserID == "" {
-		return nil, fmt.Errorf("could not extract user ID from session")
-	}
 
 	// This would need a more sophisticated lookup in a real implementation
 	return nil, fmt.Errorf("access lookup not fully implemented")
@@ -196,8 +195,8 @@ func (cs *CleanupService) ForceCleanupCluster(ctx context.Context, clusterName s
 	}
 
 	for _, entryArn := range entries {
-		if err := cs.accessManager.eksService.DeleteAccessEntry(ctx, clusterName, entryArn); err != nil {
-			slog.Error("Failed to delete access entry", "entry_arn", entryArn, "error", err)
+		if deleteErr := cs.accessManager.eksService.DeleteAccessEntry(ctx, clusterName, entryArn); deleteErr != nil {
+			slog.Error("Failed to delete access entry", "entry_arn", entryArn, "error", deleteErr)
 		} else {
 			slog.Info("Deleted access entry", "entry_arn", entryArn)
 		}
@@ -214,17 +213,17 @@ func (cs *CleanupService) CleanupUserAccess(ctx context.Context, userID string) 
 	}
 
 	for _, cluster := range clusters {
-		entries, err := cs.accessManager.ListActiveAccess(ctx, cluster.Name)
-		if err != nil {
-			slog.Error("Failed to list access for cluster", "cluster", cluster.Name, "error", err)
+		entries, listErr := cs.accessManager.ListActiveAccess(ctx, cluster.Name)
+		if listErr != nil {
+			slog.Error("Failed to list access for cluster", "cluster", cluster.Name, "error", listErr)
 			continue
 		}
 
 		for _, entryArn := range entries {
 			sessionInfo := extractSessionInfo(entryArn)
 			if sessionInfo != nil && sessionInfo.UserID == userID {
-				if err := cs.accessManager.eksService.DeleteAccessEntry(ctx, cluster.Name, entryArn); err != nil {
-					slog.Error("Failed to delete user access entry", "entry_arn", entryArn, "error", err)
+				if deleteErr := cs.accessManager.eksService.DeleteAccessEntry(ctx, cluster.Name, entryArn); deleteErr != nil {
+					slog.Error("Failed to delete user access entry", "entry_arn", entryArn, "error", deleteErr)
 				} else {
 					slog.Info("Deleted user access entry", "user", userID, "entry_arn", entryArn)
 				}

@@ -324,7 +324,7 @@ The mutating webhook automatically sets defaults and normalizes data:
 
 ## REST API Endpoints
 
-The JIT server provides REST endpoints for integration and management.
+The JIT server provides REST endpoints for integration and management, including new direct AWS access management endpoints.
 
 ### Base URL
 
@@ -336,7 +336,186 @@ https://your-domain.com
 
 All API endpoints require authentication via:
 - Slack signature verification (for Slack endpoints)
+- `X-Slack-User-Id` header for user identification
 - Kubernetes ServiceAccount tokens (for admin endpoints)
+
+### Access Management API
+
+The server now provides direct AWS access management endpoints that bypass the Kubernetes operator for immediate access operations.
+
+#### POST /api/v1/access/grant
+
+Grant immediate JIT access to an EKS cluster.
+
+**Request Headers:**
+```
+Content-Type: application/json
+X-Slack-User-Id: U1234567890
+```
+
+**Request Body:**
+```json
+{
+  "cluster_id": "cluster-123",
+  "user_id": "U1234567890", 
+  "user_email": "user@company.com",
+  "permissions": ["edit", "logs"],
+  "namespaces": ["production", "monitoring"],
+  "duration": "2h",
+  "reason": "Deploy hotfix for critical payment bug",
+  "jit_role_arn": "arn:aws:iam::123456789012:role/JITAccessRole",
+  "assume_role_arn": "arn:aws:iam::123456789012:role/CrossAccountRole"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "access_id": "access-abc123def456",
+  "cluster_name": "prod-east-1",
+  "user_id": "U1234567890",
+  "kubeconfig": "apiVersion: v1\nkind: Config\nclusters:\n...",
+  "cluster_endpoint": "https://ABC123.gr7.us-east-1.eks.amazonaws.com",
+  "expires_at": "2025-06-11T16:00:00Z",
+  "temporary_credentials": {
+    "access_key_id": "ASIAXXXXXXXXXXX",
+    "secret_access_key": "xxxxxxxxxxxxxxxxxxxxx",
+    "session_token": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "expiration": "2025-06-11T16:00:00Z"
+  }
+}
+```
+
+**Error Responses:**
+- `400`: Invalid request (missing fields, invalid duration, etc.)
+- `403`: Permission denied (user lacks required permissions)
+- `404`: Cluster not found
+- `500`: AWS access creation failed
+
+#### POST /api/v1/access/revoke
+
+Revoke active JIT access.
+
+**Request Headers:**
+```
+Content-Type: application/json
+X-Slack-User-Id: U1234567890
+```
+
+**Request Body:**
+```json
+{
+  "access_id": "access-abc123def456"
+}
+```
+
+**Response (204 No Content)**
+
+**Error Responses:**
+- `400`: Invalid request body
+- `403`: Permission denied (user can only revoke own access unless admin)
+- `404`: Access record not found
+- `500`: AWS access revocation failed
+
+#### GET /api/v1/access
+
+List access records with filtering options.
+
+**Request Headers:**
+```
+X-Slack-User-Id: U1234567890
+```
+
+**Query Parameters:**
+- `user_id` (optional): Filter by user ID
+- `cluster_id` (optional): Filter by cluster ID
+- `active` (optional): Show only active access (`true`/`false`)
+
+**Example:**
+```
+GET /api/v1/access?user_id=U1234567890&active=true
+```
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": "access-abc123def456",
+    "cluster_id": "cluster-123",
+    "user_id": "U1234567890",
+    "user_email": "user@company.com",
+    "reason": "Deploy hotfix for critical payment bug",
+    "duration": 7200000000000,
+    "status": "active",
+    "requested_at": "2025-06-11T14:00:00Z",
+    "expires_at": "2025-06-11T16:00:00Z"
+  }
+]
+```
+
+#### GET /api/v1/access/status
+
+Get status of a specific access record.
+
+**Request Headers:**
+```
+X-Slack-User-Id: U1234567890
+```
+
+**Query Parameters:**
+- `access_id` (required): Access record ID
+
+**Example:**
+```
+GET /api/v1/access/status?access_id=access-abc123def456
+```
+
+**Response (200 OK):**
+```json
+{
+  "id": "access-abc123def456",
+  "cluster_id": "cluster-123",
+  "user_id": "U1234567890",
+  "user_email": "user@company.com",
+  "reason": "Deploy hotfix for critical payment bug",
+  "duration": 7200000000000,
+  "status": "active",
+  "requested_at": "2025-06-11T14:00:00Z",
+  "expires_at": "2025-06-11T16:00:00Z",
+  "approved_by": ["U2345678901"],
+  "approved_at": "2025-06-11T14:05:00Z"
+}
+```
+
+#### POST /api/v1/access/cleanup
+
+Clean up expired access entries (admin only).
+
+**Request Headers:**
+```
+X-Slack-User-Id: U1234567890
+```
+
+**Query Parameters:**
+- `cluster_id` (required): Cluster to clean up
+
+**Example:**
+```
+POST /api/v1/access/cleanup?cluster_id=cluster-123
+```
+
+**Response (200 OK):**
+```json
+{
+  "message": "cleanup completed",
+  "cluster_name": "prod-east-1", 
+  "cleaned_count": 3
+}
+```
+
+### Cluster Management API
+
+These endpoints manage cluster configuration for the JIT system.
 
 ### Endpoints
 

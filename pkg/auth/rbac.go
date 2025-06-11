@@ -21,6 +21,7 @@ const (
 	PermissionApproveRequests Permission = "requests:approve"
 	PermissionCreateRequests  Permission = "requests:create"
 	PermissionViewRequests    Permission = "requests:view"
+	PermissionRevokeAccess    Permission = "access:revoke"
 	PermissionViewAuditLog    Permission = "audit:view"
 )
 
@@ -31,12 +32,14 @@ var rolePermissions = map[Role][]Permission{
 		PermissionApproveRequests,
 		PermissionCreateRequests,
 		PermissionViewRequests,
+		PermissionRevokeAccess,
 		PermissionViewAuditLog,
 	},
 	RoleApprover: {
 		PermissionApproveRequests,
 		PermissionCreateRequests,
 		PermissionViewRequests,
+		PermissionRevokeAccess,
 		PermissionViewAuditLog,
 	},
 	RoleRequester: {

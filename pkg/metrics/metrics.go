@@ -88,7 +88,7 @@ var (
 	)
 
 	// AWS Integration Metrics
-	awsApiCalls = promauto.NewCounterVec(
+	awsAPICalls = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "jit_aws_api_calls_total",
 			Help: "Total number of AWS API calls made",
@@ -96,7 +96,7 @@ var (
 		[]string{"service", "operation", "status", "region"},
 	)
 
-	awsApiDuration = promauto.NewHistogramVec(
+	awsAPIDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "jit_aws_api_duration_seconds",
 			Help:    "Duration of AWS API calls",
@@ -105,7 +105,7 @@ var (
 		[]string{"service", "operation", "region"},
 	)
 
-	awsApiErrors = promauto.NewCounterVec(
+	awsAPIErrors = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "jit_aws_api_errors_total",
 			Help: "Total number of AWS API errors",
@@ -131,7 +131,7 @@ var (
 		[]string{"command"},
 	)
 
-	slackApiErrors = promauto.NewCounterVec(
+	slackAPIErrors = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "jit_slack_api_errors_total",
 			Help: "Total number of Slack API errors",
@@ -211,12 +211,12 @@ func init() {
 		webhookRequestsTotal,
 		webhookRequestDuration,
 		webhookValidationErrors,
-		awsApiCalls,
-		awsApiDuration,
-		awsApiErrors,
+		awsAPICalls,
+		awsAPIDuration,
+		awsAPIErrors,
 		slackCommandsTotal,
 		slackCommandDuration,
-		slackApiErrors,
+		slackAPIErrors,
 		controllerReconcileTotal,
 		controllerReconcileDuration,
 		controllerErrors,
@@ -267,12 +267,12 @@ func RecordWebhookValidationError(webhookType, errorType, field string) {
 // AWS Metrics Functions
 
 func RecordAWSAPICall(service, operation, status, region string, duration time.Duration) {
-	awsApiCalls.WithLabelValues(service, operation, status, region).Inc()
-	awsApiDuration.WithLabelValues(service, operation, region).Observe(duration.Seconds())
+	awsAPICalls.WithLabelValues(service, operation, status, region).Inc()
+	awsAPIDuration.WithLabelValues(service, operation, region).Observe(duration.Seconds())
 }
 
 func RecordAWSAPIError(service, operation, errorCode, region string) {
-	awsApiErrors.WithLabelValues(service, operation, errorCode, region).Inc()
+	awsAPIErrors.WithLabelValues(service, operation, errorCode, region).Inc()
 }
 
 // Slack Metrics Functions
@@ -283,7 +283,7 @@ func RecordSlackCommand(command, user, channel, status string, duration time.Dur
 }
 
 func RecordSlackAPIError(operation, errorType string) {
-	slackApiErrors.WithLabelValues(operation, errorType).Inc()
+	slackAPIErrors.WithLabelValues(operation, errorType).Inc()
 }
 
 // Controller Metrics Functions

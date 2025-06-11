@@ -269,7 +269,7 @@ func hasElevatedPermissions(permissions []string) bool {
 	return false
 }
 
-// MutateJITAccessJob mutates JITAccessJob resources
+// JITAccessJobMutator mutates JITAccessJob resources
 type JITAccessJobMutator struct {
 	Client  client.Client
 	decoder admission.Decoder

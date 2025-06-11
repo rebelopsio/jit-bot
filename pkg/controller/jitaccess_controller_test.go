@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -17,14 +18,84 @@ import (
 	"github.com/rebelopsio/jit-bot/pkg/auth"
 )
 
+func createTestRequest(name, namespace string, phase AccessPhase) *JITAccessRequest {
+	return &JITAccessRequest{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: JITAccessRequestSpec{
+			UserID:    "U123456789A",
+			UserEmail: "test@company.com",
+			TargetCluster: TargetCluster{
+				Name:       "dev-east-1",
+				AWSAccount: "123456789012",
+				Region:     "us-east-1",
+			},
+			Reason:      "Testing controller functionality",
+			Duration:    "2h",
+			Permissions: []string{"view"},
+			RequestedAt: metav1.Now(),
+		},
+		Status: JITAccessRequestStatus{
+			Phase: phase,
+		},
+	}
+}
+
+func createTestJob(name, namespace string) *JITAccessJob { //nolint:unused // test helper
+	return &JITAccessJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name + "-job",
+			Namespace: namespace,
+		},
+		Spec: JITAccessJobSpec{
+			AccessRequestRef: ObjectReference{
+				Name:      name,
+				Namespace: namespace,
+			},
+			TargetCluster: TargetCluster{
+				Name:       "dev-east-1",
+				AWSAccount: "123456789012",
+				Region:     "us-east-1",
+			},
+			Duration:    "2h",
+			JITRoleArn:  "arn:aws:iam::123456789012:role/JITAccess",
+			Permissions: []string{"view"},
+		},
+	}
+}
+
 func TestJITAccessRequestReconciler_Reconcile(t *testing.T) {
+	scheme := setupTestScheme(t)
+	tests := createReconcileTestCases()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runReconcileTest(t, scheme, tt)
+		})
+	}
+}
+
+func setupTestScheme(t *testing.T) *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	err := clientgoscheme.AddToScheme(scheme)
 	require.NoError(t, err)
 	err = AddToScheme(scheme)
 	require.NoError(t, err)
+	return scheme
+}
 
-	tests := []struct {
+func createReconcileTestCases() []struct {
+	name          string
+	request       *JITAccessRequest
+	existingJob   *JITAccessJob
+	expectJob     bool
+	expectStatus  AccessPhase
+	expectError   bool
+	expectRequeue bool
+} {
+	return []struct {
 		name          string
 		request       *JITAccessRequest
 		existingJob   *JITAccessJob
@@ -34,225 +105,244 @@ func TestJITAccessRequestReconciler_Reconcile(t *testing.T) {
 		expectRequeue bool
 	}{
 		{
-			name: "new pending request creates job",
-			request: &JITAccessRequest{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-request",
-					Namespace: "jit-system",
-				},
-				Spec: JITAccessRequestSpec{
-					UserID:    "U123456789A",
-					UserEmail: "test@company.com",
-					TargetCluster: TargetCluster{
-						Name:       "dev-east-1",
-						AWSAccount: "123456789012",
-						Region:     "us-east-1",
-					},
-					Reason:      "Testing controller functionality",
-					Duration:    "2h",
-					Permissions: []string{"view"},
-					RequestedAt: metav1.Now(),
-				},
-				Status: JITAccessRequestStatus{
-					Phase:   AccessPhasePending,
-					Message: "Waiting for approval",
-				},
-			},
+			name:          "new pending request creates job",
+			request:       createTestRequest("test-request", "jit-system", AccessPhasePending),
 			expectJob:     false, // Dev environment doesn't require approval
 			expectStatus:  AccessPhaseApproved,
 			expectRequeue: true,
 		},
 		{
-			name: "approved request creates job",
-			request: &JITAccessRequest{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-request",
-					Namespace: "jit-system",
-				},
-				Spec: JITAccessRequestSpec{
-					UserID:    "U123456789A",
-					UserEmail: "test@company.com",
-					TargetCluster: TargetCluster{
-						Name:       "prod-east-1",
-						AWSAccount: "123456789012",
-						Region:     "us-east-1",
-					},
-					Reason:      "Testing controller functionality in production",
-					Duration:    "1h",
-					Permissions: []string{"view"},
-					Approvers:   []string{"platform-team"},
-					RequestedAt: metav1.Now(),
-				},
-				Status: JITAccessRequestStatus{
-					Phase:   AccessPhaseApproved,
-					Message: "Approved by platform-team",
-					Approvals: []Approval{
-						{
-							Approver:   "U456789012B",
-							ApprovedAt: metav1.Time{Time: time.Now()},
-							Comment:    "Approved by platform-team",
-						},
-					},
-				},
-			},
+			name:          "approved request creates job",
+			request:       createApprovedTestRequest(),
 			expectJob:     true,
 			expectStatus:  AccessPhaseActive,
 			expectRequeue: true,
 		},
 		{
-			name: "denied request does not create job",
-			request: &JITAccessRequest{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-request",
-					Namespace: "jit-system",
-				},
-				Spec: JITAccessRequestSpec{
-					UserID:    "U123456789A",
-					UserEmail: "test@company.com",
-					TargetCluster: TargetCluster{
-						Name:       "prod-east-1",
-						AWSAccount: "123456789012",
-						Region:     "us-east-1",
-					},
-					Reason:      "Testing denial scenario",
-					Duration:    "1h",
-					Permissions: []string{"admin"},
-					RequestedAt: metav1.Now(),
-				},
-				Status: JITAccessRequestStatus{
-					Phase:   AccessPhaseDenied,
-					Message: "Insufficient justification for admin access",
-				},
-			},
+			name:          "denied request does not create job",
+			request:       createDeniedTestRequest(),
 			expectJob:     false,
 			expectStatus:  AccessPhaseDenied,
 			expectRequeue: false,
 		},
 		{
-			name: "request with existing job does not create duplicate",
-			request: &JITAccessRequest{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-request",
-					Namespace: "jit-system",
-				},
-				Spec: JITAccessRequestSpec{
-					UserID:    "U123456789A",
-					UserEmail: "test@company.com",
-					TargetCluster: TargetCluster{
-						Name:       "staging-east-1",
-						AWSAccount: "123456789012",
-						Region:     "us-east-1",
-					},
-					Reason:      "Testing duplicate job prevention",
-					Duration:    "2h",
-					Permissions: []string{"edit"},
-					RequestedAt: metav1.Now(),
-				},
-				Status: JITAccessRequestStatus{
-					Phase: AccessPhaseApproved,
-				},
-			},
-			existingJob: &JITAccessJob{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-request-job",
-					Namespace: "jit-system",
-				},
-				Spec: JITAccessJobSpec{
-					AccessRequestRef: ObjectReference{
-						Name:      "test-request",
-						Namespace: "jit-system",
-					},
-					TargetCluster: TargetCluster{
-						Name:       "staging-east-1",
-						AWSAccount: "123456789012",
-						Region:     "us-east-1",
-					},
-					Permissions: []string{"edit"},
-					Duration:    "2h",
-				},
-				Status: JITAccessJobStatus{
-					Phase: JobPhaseCreating,
-				},
-			},
+			name:          "request with existing job does not create duplicate",
+			request:       createRequestWithExistingJob(),
+			existingJob:   createExistingJob(),
 			expectJob:     true,
 			expectStatus:  AccessPhaseActive,
 			expectRequeue: true,
 		},
 	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create fake client with initial objects
-			objs := []client.Object{tt.request}
-			if tt.existingJob != nil {
-				objs = append(objs, tt.existingJob)
-			}
+func runReconcileTest(t *testing.T, scheme *runtime.Scheme, tt struct {
+	name          string
+	request       *JITAccessRequest
+	existingJob   *JITAccessJob
+	expectJob     bool
+	expectStatus  AccessPhase
+	expectError   bool
+	expectRequeue bool
+}) {
+	// Create fake client with initial objects
+	objs := []client.Object{tt.request}
+	if tt.existingJob != nil {
+		objs = append(objs, tt.existingJob)
+	}
 
-			fakeClient := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(objs...).
-				WithStatusSubresource(&JITAccessRequest{}, &JITAccessJob{}).
-				Build()
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(objs...).
+		WithStatusSubresource(&JITAccessRequest{}, &JITAccessJob{}).
+		Build()
 
-			// Create reconciler
-			rbac := auth.NewRBAC([]string{})
-			// Set user role for auto-approval logic
-			rbac.SetUserRole(tt.request.Spec.UserID, auth.RoleRequester)
-			reconciler := &JITAccessRequestReconciler{
-				Client: fakeClient,
-				Scheme: scheme,
-				RBAC:   rbac,
-			}
+	// Create reconciler
+	reconciler := createTestReconciler(fakeClient, scheme, tt.request.Spec.UserID)
 
-			// Create reconcile request
-			req := reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      tt.request.Name,
-					Namespace: tt.request.Namespace,
+	// Create reconcile request
+	req := reconcile.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      tt.request.Name,
+			Namespace: tt.request.Namespace,
+		},
+	}
+
+	// Perform reconciliation and validate results
+	validateReconcileResult(t, reconciler, req, tt, fakeClient)
+}
+
+func createTestReconciler(fakeClient client.Client, scheme *runtime.Scheme, userID string) *JITAccessRequestReconciler {
+	rbac := auth.NewRBAC([]string{})
+	rbac.SetUserRole(userID, auth.RoleRequester)
+	return &JITAccessRequestReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		RBAC:   rbac,
+	}
+}
+
+func validateReconcileResult(t *testing.T, reconciler *JITAccessRequestReconciler, req reconcile.Request, tt struct {
+	name          string
+	request       *JITAccessRequest
+	existingJob   *JITAccessJob
+	expectJob     bool
+	expectStatus  AccessPhase
+	expectError   bool
+	expectRequeue bool
+}, fakeClient client.Client) {
+	ctx := t.Context()
+	result, reconcileErr := reconciler.Reconcile(ctx, req)
+
+	if tt.expectError {
+		assert.Error(t, reconcileErr)
+		return
+	}
+
+	assert.NoError(t, reconcileErr)
+	if tt.expectRequeue {
+		assert.True(t, result.RequeueAfter > 0, "Expected requeue but RequeueAfter was not set")
+	} else {
+		assert.Zero(t, result.RequeueAfter, "Expected no requeue but RequeueAfter was set")
+	}
+
+	// Check the request status was updated
+	updatedRequest := &JITAccessRequest{}
+	err := fakeClient.Get(ctx, req.NamespacedName, updatedRequest)
+	require.NoError(t, err)
+
+	assert.Equal(t, tt.expectStatus, updatedRequest.Status.Phase)
+
+	// Check if job was created when expected
+	if tt.expectJob && tt.existingJob == nil {
+		validateJobCreation(t, fakeClient, ctx, tt.request)
+	}
+}
+
+func validateJobCreation(t *testing.T, fakeClient client.Client, ctx context.Context, request *JITAccessRequest) {
+	jobList := &JITAccessJobList{}
+	err := fakeClient.List(ctx, jobList, client.InNamespace(request.Namespace))
+	require.NoError(t, err)
+
+	found := false
+	for _, job := range jobList.Items {
+		if job.Spec.AccessRequestRef.Name == request.Name {
+			found = true
+			assert.Equal(t, request.Spec.TargetCluster, job.Spec.TargetCluster)
+			assert.Equal(t, request.Spec.Permissions, job.Spec.Permissions)
+			break
+		}
+	}
+	assert.True(t, found, "Expected job to be created")
+}
+
+func createApprovedTestRequest() *JITAccessRequest {
+	return &JITAccessRequest{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-request",
+			Namespace: "jit-system",
+		},
+		Spec: JITAccessRequestSpec{
+			UserID:    "U123456789A",
+			UserEmail: "test@company.com",
+			TargetCluster: TargetCluster{
+				Name:       "prod-east-1",
+				AWSAccount: "123456789012",
+				Region:     "us-east-1",
+			},
+			Reason:      "Testing controller functionality in production",
+			Duration:    "1h",
+			Permissions: []string{"view"},
+			Approvers:   []string{"platform-team"},
+			RequestedAt: metav1.Now(),
+		},
+		Status: JITAccessRequestStatus{
+			Phase:   AccessPhaseApproved,
+			Message: "Approved by platform-team",
+			Approvals: []Approval{
+				{
+					Approver:   "U456789012B",
+					ApprovedAt: metav1.Time{Time: time.Now()},
+					Comment:    "Approved by platform-team",
 				},
-			}
+			},
+		},
+	}
+}
 
-			// Perform reconciliation
-			ctx := t.Context()
-			result, err := reconciler.Reconcile(ctx, req)
+func createDeniedTestRequest() *JITAccessRequest {
+	return &JITAccessRequest{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-request",
+			Namespace: "jit-system",
+		},
+		Spec: JITAccessRequestSpec{
+			UserID:    "U123456789A",
+			UserEmail: "test@company.com",
+			TargetCluster: TargetCluster{
+				Name:       "prod-east-1",
+				AWSAccount: "123456789012",
+				Region:     "us-east-1",
+			},
+			Reason:      "Testing denial scenario",
+			Duration:    "1h",
+			Permissions: []string{"admin"},
+			RequestedAt: metav1.Now(),
+		},
+		Status: JITAccessRequestStatus{
+			Phase:   AccessPhaseDenied,
+			Message: "Insufficient justification for admin access",
+		},
+	}
+}
 
-			if tt.expectError {
-				assert.Error(t, err)
-				return
-			}
+func createRequestWithExistingJob() *JITAccessRequest {
+	return &JITAccessRequest{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-request",
+			Namespace: "jit-system",
+		},
+		Spec: JITAccessRequestSpec{
+			UserID:    "U123456789A",
+			UserEmail: "test@company.com",
+			TargetCluster: TargetCluster{
+				Name:       "staging-east-1",
+				AWSAccount: "123456789012",
+				Region:     "us-east-1",
+			},
+			Reason:      "Testing duplicate job prevention",
+			Duration:    "2h",
+			Permissions: []string{"edit"},
+			RequestedAt: metav1.Now(),
+		},
+		Status: JITAccessRequestStatus{
+			Phase: AccessPhaseApproved,
+		},
+	}
+}
 
-			assert.NoError(t, err)
-			if tt.expectRequeue {
-				assert.True(t, result.RequeueAfter > 0, "Expected requeue but RequeueAfter was not set")
-			} else {
-				assert.Zero(t, result.RequeueAfter, "Expected no requeue but RequeueAfter was set")
-			}
-
-			// Check the request status was updated
-			updatedRequest := &JITAccessRequest{}
-			err = fakeClient.Get(ctx, req.NamespacedName, updatedRequest)
-			require.NoError(t, err)
-
-			assert.Equal(t, tt.expectStatus, updatedRequest.Status.Phase)
-
-			// Check if job was created when expected
-			if tt.expectJob && tt.existingJob == nil {
-				jobList := &JITAccessJobList{}
-				err = fakeClient.List(ctx, jobList, client.InNamespace(tt.request.Namespace))
-				require.NoError(t, err)
-
-				found := false
-				for _, job := range jobList.Items {
-					if job.Spec.AccessRequestRef.Name == tt.request.Name {
-						found = true
-						assert.Equal(t, tt.request.Spec.TargetCluster, job.Spec.TargetCluster)
-						assert.Equal(t, tt.request.Spec.Permissions, job.Spec.Permissions)
-						break
-					}
-				}
-				assert.True(t, found, "Expected job to be created")
-			}
-		})
+func createExistingJob() *JITAccessJob {
+	return &JITAccessJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-request-job",
+			Namespace: "jit-system",
+		},
+		Spec: JITAccessJobSpec{
+			AccessRequestRef: ObjectReference{
+				Name:      "test-request",
+				Namespace: "jit-system",
+			},
+			TargetCluster: TargetCluster{
+				Name:       "staging-east-1",
+				AWSAccount: "123456789012",
+				Region:     "us-east-1",
+			},
+			Permissions: []string{"edit"},
+			Duration:    "2h",
+		},
+		Status: JITAccessJobStatus{
+			Phase: JobPhaseCreating,
+		},
 	}
 }
 

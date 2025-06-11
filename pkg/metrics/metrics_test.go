@@ -222,7 +222,7 @@ func TestRecordAWSAPICall(t *testing.T) {
 		# TYPE jit_aws_api_calls_total counter
 		jit_aws_api_calls_total{operation="` + operation + `",region="` + region + `",service="` + service + `",status="` + status + `"} 1
 	`
-	err := testutil.CollectAndCompare(awsApiCalls, strings.NewReader(expected), metricName)
+	err := testutil.CollectAndCompare(awsAPICalls, strings.NewReader(expected), metricName)
 	assert.NoError(t, err)
 }
 
@@ -243,7 +243,7 @@ func TestRecordAWSAPIError(t *testing.T) {
 		# TYPE jit_aws_api_errors_total counter
 		jit_aws_api_errors_total{error_code="` + errorCode + `",operation="` + operation + `",region="` + region + `",service="` + service + `"} 1
 	`
-	err := testutil.CollectAndCompare(awsApiErrors, strings.NewReader(expected), metricName)
+	err := testutil.CollectAndCompare(awsAPIErrors, strings.NewReader(expected), metricName)
 	assert.NoError(t, err)
 }
 
@@ -283,7 +283,7 @@ func TestRecordSlackAPIError(t *testing.T) {
 		# TYPE jit_slack_api_errors_total counter
 		jit_slack_api_errors_total{error_type="` + errorType + `",operation="` + operation + `"} 1
 	`
-	err := testutil.CollectAndCompare(slackApiErrors, strings.NewReader(expected), metricName)
+	err := testutil.CollectAndCompare(slackAPIErrors, strings.NewReader(expected), metricName)
 	assert.NoError(t, err)
 }
 
@@ -472,17 +472,18 @@ func TestMetricsConcurrency(t *testing.T) {
 
 	done := make(chan bool)
 
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		go func() {
-			for j := 0; j < numIncrements; j++ {
+			for range numIncrements {
 				RecordAccessRequest("test-cluster", "test-user", "test-env", []string{"view"})
 			}
 			done <- true
 		}()
+		_ = i // avoid unused variable warning
 	}
 
 	// Wait for all goroutines to complete
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		<-done
 	}
 
@@ -509,12 +510,12 @@ func resetMetrics() {
 	webhookRequestsTotal.Reset()
 	webhookRequestDuration.Reset()
 	webhookValidationErrors.Reset()
-	awsApiCalls.Reset()
-	awsApiDuration.Reset()
-	awsApiErrors.Reset()
+	awsAPICalls.Reset()
+	awsAPIDuration.Reset()
+	awsAPIErrors.Reset()
 	slackCommandsTotal.Reset()
 	slackCommandDuration.Reset()
-	slackApiErrors.Reset()
+	slackAPIErrors.Reset()
 	securityViolationsTotal.Reset()
 	privilegeEscalationAttempts.Reset()
 	controllerReconcileTotal.Reset()
