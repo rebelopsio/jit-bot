@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/rebelopsio/jit-bot/compare/v1.0.0...v1.0.1) (2025-06-11)
+
+
+### Bug Fixes
+
+* fix long running workflow for container builds ([e44eb6b](https://github.com/rebelopsio/jit-bot/commit/e44eb6bed1a56423b46b612bd44f7e9f08cb9b37))
+
 ## 1.0.0 (2025-06-11)
 
 
