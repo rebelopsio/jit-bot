@@ -1,0 +1,42 @@
+apiVersion: v1
+entries:
+  jit-bot:
+  - apiVersion: v2
+    appVersion: 2f4f533fed47124149697b39d7723fa8b3450a25
+    created: "2025-06-11T20:07:42.514091926Z"
+    description: A Helm chart for JIT Bot - Just-In-Time Access Tool
+    digest: 018ce23bad3d4984c30290cf452d6da3596cad4c95a6cbb27c0a45f84ca526fb
+    keywords:
+    - jit
+    - access-control
+    - aws
+    - eks
+    - slack
+    maintainers:
+    - email: platform@rebelops.io
+      name: Platform Team
+    name: jit-bot
+    type: application
+    urls:
+    - https://rebelopsio.github.io/jit-bot/jit-bot-0.1.1.tgz
+    version: 0.1.1
+  - apiVersion: v2
+    appVersion: 2f4f533fed47124149697b39d7723fa8b3450a25
+    created: "2025-06-11T20:07:42.51459772Z"
+    description: A Helm chart for JIT Bot - Just-In-Time Access Tool
+    digest: 018ce23bad3d4984c30290cf452d6da3596cad4c95a6cbb27c0a45f84ca526fb
+    keywords:
+    - jit
+    - access-control
+    - aws
+    - eks
+    - slack
+    maintainers:
+    - email: platform@rebelops.io
+      name: Platform Team
+    name: jit-bot
+    type: application
+    urls:
+    - https://rebelopsio.github.io/jit-bot/helm-charts/jit-bot-0.1.1.tgz
+    version: 0.1.1
+generated: "2025-06-11T20:07:42.513443193Z"
