@@ -81,7 +81,9 @@ func (e *EKSService) CreateAccessEntry(ctx context.Context, entry AccessEntry) e
 	return nil
 }
 
-func (e *EKSService) AssociateAccessPolicy(ctx context.Context, clusterName, principalArn string, policy AccessPolicy) error {
+func (e *EKSService) AssociateAccessPolicy(
+	ctx context.Context, clusterName, principalArn string, policy AccessPolicy,
+) error {
 	input := &eks.AssociateAccessPolicyInput{
 		ClusterName:  aws.String(clusterName),
 		PrincipalArn: aws.String(principalArn),
@@ -179,39 +181,72 @@ const (
 	EKSEditorPolicy    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSEditPolicy"
 	EKSAdminPolicy     = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
 	EKSNamespacePolicy = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminViewPolicy"
+
+	// Access scope types
+	AccessScopeCluster   = "cluster"
+	AccessScopeNamespace = "namespace"
 )
 
 // CreateJITAccessEntry creates a temporary access entry for JIT access
-func (e *EKSService) CreateJITAccessEntry(ctx context.Context, clusterName, principalArn, username string, permissions []string, namespaces []string) error {
+func (e *EKSService) CreateJITAccessEntry(
+	ctx context.Context,
+	clusterName, principalArn, username string,
+	permissions []string,
+	namespaces []string,
+) error {
 	// Determine appropriate policies based on permissions
 	var accessPolicies []AccessPolicy
 
 	for _, permission := range permissions {
 		switch permission {
 		case "view":
+			scope := AccessScope{Type: AccessScopeNamespace, Namespaces: namespaces}
+			if len(namespaces) == 0 {
+				scope.Type = AccessScopeCluster
+			}
 			accessPolicies = append(accessPolicies, AccessPolicy{
-				PolicyArn: EKSViewerPolicy,
-				AccessScope: AccessScope{
-					Type:       "namespace",
-					Namespaces: namespaces,
-				},
+				PolicyArn:   EKSViewerPolicy,
+				AccessScope: scope,
 			})
 		case "edit":
+			scope := AccessScope{Type: AccessScopeNamespace, Namespaces: namespaces}
+			if len(namespaces) == 0 {
+				scope.Type = AccessScopeCluster
+			}
 			accessPolicies = append(accessPolicies, AccessPolicy{
-				PolicyArn: EKSEditorPolicy,
-				AccessScope: AccessScope{
-					Type:       "namespace",
-					Namespaces: namespaces,
-				},
+				PolicyArn:   EKSEditorPolicy,
+				AccessScope: scope,
 			})
-		case "admin":
+		case "admin", "cluster-admin":
 			accessPolicies = append(accessPolicies, AccessPolicy{
 				PolicyArn: EKSAdminPolicy,
 				AccessScope: AccessScope{
-					Type: "cluster",
+					Type: AccessScopeCluster,
 				},
 			})
+		case "debug", "logs", "exec", "port-forward":
+			// These require edit permissions as a baseline
+			scope := AccessScope{Type: AccessScopeNamespace, Namespaces: namespaces}
+			if len(namespaces) == 0 {
+				scope.Type = AccessScopeCluster
+			}
+			accessPolicies = append(accessPolicies, AccessPolicy{
+				PolicyArn:   EKSEditorPolicy,
+				AccessScope: scope,
+			})
 		}
+	}
+
+	// If no policies were matched, default to view
+	if len(accessPolicies) == 0 {
+		scope := AccessScope{Type: AccessScopeNamespace, Namespaces: namespaces}
+		if len(namespaces) == 0 {
+			scope.Type = AccessScopeCluster
+		}
+		accessPolicies = append(accessPolicies, AccessPolicy{
+			PolicyArn:   EKSViewerPolicy,
+			AccessScope: scope,
+		})
 	}
 
 	entry := AccessEntry{
@@ -220,11 +255,63 @@ func (e *EKSService) CreateJITAccessEntry(ctx context.Context, clusterName, prin
 		Username:       username,
 		AccessPolicies: accessPolicies,
 		Tags: map[string]string{
-			"Purpose":   "JITAccess",
-			"CreatedBy": "jit-server",
-			"Temporary": "true",
+			"Purpose":      "JITAccess",
+			"CreatedBy":    "jit-server",
+			"Temporary":    "true",
+			"CreatedAt":    time.Now().Format(time.RFC3339),
+			"ExpiresAfter": "8h", // Default expiration hint
 		},
 	}
 
 	return e.CreateAccessEntry(ctx, entry)
+}
+
+// ListJITAccessEntries lists only JIT-created access entries
+func (e *EKSService) ListJITAccessEntries(ctx context.Context, clusterName string) ([]string, error) {
+	allEntries, err := e.ListAccessEntries(ctx, clusterName)
+	if err != nil {
+		return nil, err
+	}
+
+	var jitEntries []string
+	for _, entryArn := range allEntries {
+		// Check if this is a JIT entry by looking at tags
+		entry, describeErr := e.DescribeAccessEntry(ctx, clusterName, entryArn)
+		if describeErr != nil {
+			continue
+		}
+
+		if entry.Tags["Purpose"] == "JITAccess" || entry.Tags["Temporary"] == "true" {
+			jitEntries = append(jitEntries, entryArn)
+		}
+	}
+
+	return jitEntries, nil
+}
+
+// CleanupExpiredJITEntries removes expired JIT access entries
+func (e *EKSService) CleanupExpiredJITEntries(ctx context.Context, clusterName string, maxAge time.Duration) error {
+	jitEntries, err := e.ListJITAccessEntries(ctx, clusterName)
+	if err != nil {
+		return fmt.Errorf("failed to list JIT entries: %w", err)
+	}
+
+	for _, entryArn := range jitEntries {
+		entry, describeErr := e.DescribeAccessEntry(ctx, clusterName, entryArn)
+		if describeErr != nil {
+			slog.Warn("Failed to describe entry for cleanup", "entry", entryArn, "error", describeErr)
+			continue
+		}
+
+		// Check if entry is older than maxAge
+		if time.Since(entry.CreatedAt) > maxAge {
+			if deleteErr := e.DeleteAccessEntry(ctx, clusterName, entryArn); deleteErr != nil {
+				slog.Error("Failed to delete expired entry", "entry", entryArn, "error", deleteErr)
+			} else {
+				slog.Info("Cleaned up expired JIT entry", "entry", entryArn, "age", time.Since(entry.CreatedAt))
+			}
+		}
+	}
+
+	return nil
 }

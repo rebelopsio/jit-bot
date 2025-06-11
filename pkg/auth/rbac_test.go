@@ -75,7 +75,8 @@ func TestUserHasPermission(t *testing.T) {
 	for _, test := range tests {
 		hasPermission := rbac.UserHasPermission(test.userID, test.permission)
 		if hasPermission != test.expected {
-			t.Errorf("User %s permission %s: expected %v, got %v", test.userID, test.permission, test.expected, hasPermission)
+			t.Errorf("User %s permission %s: expected %v, got %v",
+				test.userID, test.permission, test.expected, hasPermission)
 		}
 	}
 }

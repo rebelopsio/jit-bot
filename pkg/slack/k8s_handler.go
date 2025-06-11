@@ -35,7 +35,11 @@ func NewK8sCommandHandler(client client.Client, rbac *auth.RBAC, namespace strin
 }
 
 // HandleRequestCommand processes /jit request commands
-func (h *K8sCommandHandler) HandleRequestCommand(ctx context.Context, cmd SlackCommand, args []string) (*SlackResponse, error) {
+func (h *K8sCommandHandler) HandleRequestCommand(
+	ctx context.Context,
+	cmd SlackCommand,
+	args []string,
+) (*SlackResponse, error) {
 	// Check user permissions
 	if !h.rbac.UserHasPermission(cmd.UserID, auth.PermissionCreateRequests) {
 		return &SlackResponse{
@@ -105,12 +109,22 @@ func (h *K8sCommandHandler) HandleRequestCommand(ctx context.Context, cmd SlackC
 
 	return &SlackResponse{
 		ResponseType: "in_channel",
-		Text:         fmt.Sprintf("✅ JIT access request created: `%s`\n🎯 Cluster: %s\n⏱️ Duration: %s\n📝 Reason: %s", request.Name, clusterName, duration, reason),
+		Text: fmt.Sprintf(
+			"✅ JIT access request created: `%s`\n🎯 Cluster: %s\n⏱️ Duration: %s\n📝 Reason: %s",
+			request.Name,
+			clusterName,
+			duration,
+			reason,
+		),
 	}, nil
 }
 
 // HandleApproveCommand processes /jit approve commands
-func (h *K8sCommandHandler) HandleApproveCommand(ctx context.Context, cmd SlackCommand, args []string) (*SlackResponse, error) {
+func (h *K8sCommandHandler) HandleApproveCommand(
+	ctx context.Context,
+	cmd SlackCommand,
+	args []string,
+) (*SlackResponse, error) {
 	// Check user permissions
 	if !h.rbac.UserHasPermission(cmd.UserID, auth.PermissionApproveRequests) {
 		return &SlackResponse{
@@ -161,7 +175,11 @@ func (h *K8sCommandHandler) HandleApproveCommand(ctx context.Context, cmd SlackC
 }
 
 // HandleListCommand processes /jit list commands
-func (h *K8sCommandHandler) HandleListCommand(ctx context.Context, cmd SlackCommand, args []string) (*SlackResponse, error) {
+func (h *K8sCommandHandler) HandleListCommand(
+	ctx context.Context,
+	cmd SlackCommand,
+	args []string,
+) (*SlackResponse, error) {
 	var requestList controller.JITAccessRequestList
 	listOpts := []client.ListOption{
 		client.InNamespace(h.namespace),

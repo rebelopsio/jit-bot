@@ -20,13 +20,13 @@ type AssumeRoleInput struct {
 	RoleArn         string
 	SessionName     string
 	DurationSeconds int32
-	ExternalId      string
+	ExternalID      string
 	Policy          string
 	Tags            []types.Tag
 }
 
 type Credentials struct {
-	AccessKeyId     string
+	AccessKeyID     string
 	SecretAccessKey string
 	SessionToken    string
 	Expiration      time.Time
@@ -53,8 +53,8 @@ func (s *STSService) AssumeRole(ctx context.Context, input AssumeRoleInput) (*Cr
 		DurationSeconds: aws.Int32(input.DurationSeconds),
 	}
 
-	if input.ExternalId != "" {
-		assumeRoleInput.ExternalId = aws.String(input.ExternalId)
+	if input.ExternalID != "" {
+		assumeRoleInput.ExternalId = aws.String(input.ExternalID)
 	}
 
 	if input.Policy != "" {
@@ -71,14 +71,16 @@ func (s *STSService) AssumeRole(ctx context.Context, input AssumeRoleInput) (*Cr
 	}
 
 	return &Credentials{
-		AccessKeyId:     *result.Credentials.AccessKeyId,
+		AccessKeyID:     *result.Credentials.AccessKeyId,
 		SecretAccessKey: *result.Credentials.SecretAccessKey,
 		SessionToken:    *result.Credentials.SessionToken,
 		Expiration:      *result.Credentials.Expiration,
 	}, nil
 }
 
-func (s *STSService) AssumeRoleWithWebIdentity(ctx context.Context, roleArn, webIdentityToken, sessionName string, durationSeconds int32) (*Credentials, error) {
+func (s *STSService) AssumeRoleWithWebIdentity(
+	ctx context.Context, roleArn, webIdentityToken, sessionName string, durationSeconds int32,
+) (*Credentials, error) {
 	input := &sts.AssumeRoleWithWebIdentityInput{
 		RoleArn:          aws.String(roleArn),
 		RoleSessionName:  aws.String(sessionName),
@@ -92,7 +94,7 @@ func (s *STSService) AssumeRoleWithWebIdentity(ctx context.Context, roleArn, web
 	}
 
 	return &Credentials{
-		AccessKeyId:     *result.Credentials.AccessKeyId,
+		AccessKeyID:     *result.Credentials.AccessKeyId,
 		SecretAccessKey: *result.Credentials.SecretAccessKey,
 		SessionToken:    *result.Credentials.SessionToken,
 		Expiration:      *result.Credentials.Expiration,

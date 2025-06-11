@@ -56,7 +56,9 @@ func (r *JITAccessRequestReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 }
 
-func (r *JITAccessRequestReconciler) handlePendingRequest(ctx context.Context, jitReq *JITAccessRequest) (ctrl.Result, error) {
+func (r *JITAccessRequestReconciler) handlePendingRequest(
+	ctx context.Context, jitReq *JITAccessRequest,
+) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
 	// Initialize status if empty
@@ -105,7 +107,10 @@ func (r *JITAccessRequestReconciler) handlePendingRequest(ctx context.Context, j
 	return ctrl.Result{RequeueAfter: time.Minute * 5}, nil
 }
 
-func (r *JITAccessRequestReconciler) handleApprovedRequest(ctx context.Context, jitReq *JITAccessRequest) (ctrl.Result, error) {
+func (r *JITAccessRequestReconciler) handleApprovedRequest(
+	ctx context.Context,
+	jitReq *JITAccessRequest,
+) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
 	// Create JITAccessJob to handle the actual access provisioning
@@ -147,7 +152,10 @@ func (r *JITAccessRequestReconciler) handleApprovedRequest(ctx context.Context, 
 	return ctrl.Result{RequeueAfter: time.Minute * 2}, nil
 }
 
-func (r *JITAccessRequestReconciler) handleDeniedRequest(ctx context.Context, jitReq *JITAccessRequest) (ctrl.Result, error) {
+func (r *JITAccessRequestReconciler) handleDeniedRequest(
+	ctx context.Context,
+	jitReq *JITAccessRequest,
+) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
 	// For denied requests, we don't need to do anything special
@@ -158,7 +166,10 @@ func (r *JITAccessRequestReconciler) handleDeniedRequest(ctx context.Context, ji
 	return ctrl.Result{}, nil
 }
 
-func (r *JITAccessRequestReconciler) handleActiveRequest(ctx context.Context, jitReq *JITAccessRequest) (ctrl.Result, error) {
+func (r *JITAccessRequestReconciler) handleActiveRequest(
+	ctx context.Context,
+	jitReq *JITAccessRequest,
+) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
 	// Check if access has expired
@@ -186,7 +197,10 @@ func (r *JITAccessRequestReconciler) handleActiveRequest(ctx context.Context, ji
 	return r.syncWithJob(ctx, jitReq)
 }
 
-func (r *JITAccessRequestReconciler) handleExpiredRequest(ctx context.Context, jitReq *JITAccessRequest) (ctrl.Result, error) {
+func (r *JITAccessRequestReconciler) handleExpiredRequest(
+	ctx context.Context,
+	jitReq *JITAccessRequest,
+) (ctrl.Result, error) {
 	// Ensure cleanup is complete
 	// The JITAccessJob controller will handle the actual cleanup
 	return ctrl.Result{}, nil

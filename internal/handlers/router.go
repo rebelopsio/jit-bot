@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -30,6 +31,11 @@ func NewRouter(cfg *config.Config) (http.Handler, error) {
 
 	adminHandler := NewAdminHandler(rbac, memStore)
 
+	accessHandler, err := NewAccessHandler(rbac, memStore, cfg.AWS.Region)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create access handler: %w", err)
+	}
+
 	mux.HandleFunc("/health", h.Health)
 	mux.HandleFunc("/ready", h.Ready)
 
@@ -55,6 +61,47 @@ func NewRouter(cfg *config.Config) (http.Handler, error) {
 	})
 
 	mux.HandleFunc("/api/v1/users/role", adminHandler.ManageUser)
+
+	// Access management endpoints
+	mux.HandleFunc("/api/v1/access/grant", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		accessHandler.GrantAccess(w, r)
+	})
+
+	mux.HandleFunc("/api/v1/access/revoke", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		accessHandler.RevokeAccess(w, r)
+	})
+
+	mux.HandleFunc("/api/v1/access", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		accessHandler.ListAccess(w, r)
+	})
+
+	mux.HandleFunc("/api/v1/access/status", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		accessHandler.GetAccessStatus(w, r)
+	})
+
+	mux.HandleFunc("/api/v1/access/cleanup", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		accessHandler.CleanupExpiredAccess(w, r)
+	})
 
 	return mux, nil
 }

@@ -117,3 +117,35 @@ func (s *MemoryStore) ListUserAccesses(userID string) ([]*models.ClusterAccess, 
 	}
 	return accesses, nil
 }
+
+// CreateClusterAccess creates a new cluster access record (alias for CreateAccess)
+func (s *MemoryStore) CreateClusterAccess(access *models.ClusterAccess) error {
+	return s.CreateAccess(access)
+}
+
+func (s *MemoryStore) GetClusterAccess(id string) (*models.ClusterAccess, error) {
+	return s.GetAccess(id)
+}
+
+func (s *MemoryStore) UpdateClusterAccess(access *models.ClusterAccess) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.accesses[access.ID]; !exists {
+		return fmt.Errorf("access %s not found", access.ID)
+	}
+
+	s.accesses[access.ID] = access
+	return nil
+}
+
+func (s *MemoryStore) ListClusterAccess() ([]*models.ClusterAccess, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	accesses := make([]*models.ClusterAccess, 0, len(s.accesses))
+	for _, access := range s.accesses {
+		accesses = append(accesses, access)
+	}
+	return accesses, nil
+}

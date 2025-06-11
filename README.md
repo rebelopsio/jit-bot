@@ -41,6 +41,9 @@ The system consists of two main components:
 - **Audit Trail**: Complete tracking of all access requests and approvals
 - **Security**: Temporary credentials stored in Kubernetes secrets
 - **Auto-Cleanup**: Automated revocation of expired access and resource cleanup
+- **REST API**: Complete HTTP API for programmatic access management
+- **AWS Integration**: Full STS and EKS integration with temporary credential generation
+- **KubeConfig Generation**: Automatic kubeconfig creation with embedded temporary credentials
 
 ## 🚀 Quick Start
 
@@ -135,6 +138,75 @@ kubectl describe jitaccessrequest jit-user123-1234567890 -n jit-system
 ```bash
 kubectl get jitaccessjobs -n jit-system
 kubectl logs deployment/jit-operator -n jit-system
+```
+
+### REST API
+
+The JIT Server provides a complete REST API for programmatic access management:
+
+#### Grant Access
+```bash
+POST /api/v1/access/grant
+Content-Type: application/json
+X-Slack-User-Id: U1234567890
+
+{
+  "cluster_id": "cluster-123",
+  "user_id": "U1234567890",
+  "user_email": "user@company.com",
+  "permissions": ["edit"],
+  "namespaces": ["production"],
+  "duration": "2h",
+  "reason": "Deploy hotfix for critical bug",
+  "jit_role_arn": "arn:aws:iam::123456789012:role/JITAccessRole"
+}
+```
+
+**Response:**
+```json
+{
+  "access_id": "access-abc123",
+  "cluster_name": "prod-east-1",
+  "user_id": "U1234567890",
+  "kubeconfig": "apiVersion: v1\nkind: Config...",
+  "cluster_endpoint": "https://ABC123.gr7.us-east-1.eks.amazonaws.com",
+  "expires_at": "2025-06-11T16:00:00Z",
+  "temporary_credentials": {
+    "access_key_id": "ASIA...",
+    "secret_access_key": "...",
+    "session_token": "...",
+    "expiration": "2025-06-11T16:00:00Z"
+  }
+}
+```
+
+#### Revoke Access
+```bash
+POST /api/v1/access/revoke
+Content-Type: application/json
+X-Slack-User-Id: U1234567890
+
+{
+  "access_id": "access-abc123"
+}
+```
+
+#### List Access Records
+```bash
+GET /api/v1/access?user_id=U1234567890&active=true
+X-Slack-User-Id: U1234567890
+```
+
+#### Get Access Status
+```bash
+GET /api/v1/access/status?access_id=access-abc123
+X-Slack-User-Id: U1234567890
+```
+
+#### Cleanup Expired Access
+```bash
+POST /api/v1/access/cleanup?cluster_id=cluster-123
+X-Slack-User-Id: U1234567890  # Admin only
 ```
 
 ## 🔧 Configuration

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"github.com/rebelopsio/jit-bot/pkg/auth"
 	"github.com/rebelopsio/jit-bot/pkg/models"
 	"github.com/rebelopsio/jit-bot/pkg/store"

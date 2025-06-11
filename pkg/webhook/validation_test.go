@@ -390,7 +390,14 @@ func TestJITAccessRequestValidator_Handle(t *testing.T) {
 			assert.Equal(t, tt.wantAllowed, resp.Allowed, "Expected allowed=%v, got=%v", tt.wantAllowed, resp.Allowed)
 
 			if !tt.wantAllowed && tt.wantMessage != "" {
-				assert.Contains(t, resp.Result.Message, tt.wantMessage, "Expected message to contain '%s', got '%s'", tt.wantMessage, resp.Result.Message)
+				assert.Contains(
+					t,
+					resp.Result.Message,
+					tt.wantMessage,
+					"Expected message to contain '%s', got '%s'",
+					tt.wantMessage,
+					resp.Result.Message,
+				)
 			}
 		})
 	}
@@ -707,9 +714,11 @@ func TestValidateNamespaces(t *testing.T) {
 			wantErr:    false, // Kubernetes namespace regex allows starting with number
 		},
 		{
-			name:       "invalid namespace - too long",
-			namespaces: []string{"this-is-a-very-long-namespace-name-that-exceeds-the-maximum-allowed-length-for-kubernetes-namespaces"},
-			wantErr:    false, // Current validation doesn't check length limits
+			name: "invalid namespace - too long",
+			namespaces: []string{
+				"this-is-a-very-long-namespace-name-that-exceeds-the-maximum-allowed-length-for-kubernetes-namespaces",
+			},
+			wantErr: false, // Current validation doesn't check length limits
 		},
 	}
 

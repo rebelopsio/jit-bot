@@ -24,10 +24,10 @@ var logger = log.Log.WithName("monitoring")
 
 // Config holds monitoring configuration
 type Config struct {
-	MetricsEnabled bool                    `yaml:"metrics" json:"metrics"`
+	MetricsEnabled bool                    `yaml:"metrics"     json:"metrics"`
 	MetricsPort    int                     `yaml:"metricsPort" json:"metricsPort"`
-	HealthPort     int                     `yaml:"healthPort" json:"healthPort"`
-	Tracing        telemetry.TracingConfig `yaml:"tracing" json:"tracing"`
+	HealthPort     int                     `yaml:"healthPort"  json:"healthPort"`
+	Tracing        telemetry.TracingConfig `yaml:"tracing"     json:"tracing"`
 }
 
 // Monitor manages metrics and tracing
@@ -59,16 +59,12 @@ func (m *Monitor) Start(ctx context.Context) error {
 
 	// Start metrics server
 	if m.config.MetricsEnabled {
-		if err := m.startMetricsServer(); err != nil {
-			return fmt.Errorf("failed to start metrics server: %w", err)
-		}
+		m.startMetricsServer()
 		logger.Info("Metrics server started", "port", m.config.MetricsPort)
 	}
 
 	// Start health server
-	if err := m.startHealthServer(); err != nil {
-		return fmt.Errorf("failed to start health server: %w", err)
-	}
+	m.startHealthServer()
 	logger.Info("Health server started", "port", m.config.HealthPort)
 
 	// Initialize system health checks
@@ -109,7 +105,7 @@ func (m *Monitor) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (m *Monitor) startMetricsServer() error {
+func (m *Monitor) startMetricsServer() {
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
 
@@ -127,11 +123,9 @@ func (m *Monitor) startMetricsServer() error {
 			logger.Error(err, "Metrics server failed")
 		}
 	}()
-
-	return nil
 }
 
-func (m *Monitor) startHealthServer() error {
+func (m *Monitor) startHealthServer() {
 	mux := http.NewServeMux()
 
 	// Add health check endpoints
@@ -179,8 +173,6 @@ func (m *Monitor) startHealthServer() error {
 			logger.Error(err, "Health server failed")
 		}
 	}()
-
-	return nil
 }
 
 func (m *Monitor) initializeHealthChecks() {
@@ -200,7 +192,12 @@ func (m *Monitor) isSystemReady() bool {
 // Monitoring wrapper functions that combine metrics and tracing
 
 // TrackAccessRequest tracks an access request operation with both metrics and tracing
-func (m *Monitor) TrackAccessRequest(ctx context.Context, operation, userID, cluster, environment string, permissions []string, fn func(context.Context) error) error {
+func (m *Monitor) TrackAccessRequest(
+	ctx context.Context,
+	operation, userID, cluster, environment string,
+	permissions []string,
+	fn func(context.Context) error,
+) error {
 	// Record metrics
 	metrics.RecordAccessRequest(cluster, userID, environment, permissions)
 
@@ -209,7 +206,11 @@ func (m *Monitor) TrackAccessRequest(ctx context.Context, operation, userID, clu
 }
 
 // TrackWebhookRequest tracks a webhook request with both metrics and tracing
-func (m *Monitor) TrackWebhookRequest(ctx context.Context, webhookType, operation string, fn func(context.Context) error) error {
+func (m *Monitor) TrackWebhookRequest(
+	ctx context.Context,
+	webhookType, operation string,
+	fn func(context.Context) error,
+) error {
 	start := time.Now()
 
 	// Add tracing
@@ -226,7 +227,11 @@ func (m *Monitor) TrackWebhookRequest(ctx context.Context, webhookType, operatio
 }
 
 // TrackAWSCall tracks an AWS API call with both metrics and tracing
-func (m *Monitor) TrackAWSCall(ctx context.Context, service, operation, region string, fn func(context.Context) error) error {
+func (m *Monitor) TrackAWSCall(
+	ctx context.Context,
+	service, operation, region string,
+	fn func(context.Context) error,
+) error {
 	start := time.Now()
 
 	// Add tracing
@@ -246,7 +251,11 @@ func (m *Monitor) TrackAWSCall(ctx context.Context, service, operation, region s
 }
 
 // TrackSlackCommand tracks a Slack command with both metrics and tracing
-func (m *Monitor) TrackSlackCommand(ctx context.Context, command, userID, channelID string, fn func(context.Context) error) error {
+func (m *Monitor) TrackSlackCommand(
+	ctx context.Context,
+	command, userID, channelID string,
+	fn func(context.Context) error,
+) error {
 	start := time.Now()
 
 	// Add tracing
@@ -263,7 +272,11 @@ func (m *Monitor) TrackSlackCommand(ctx context.Context, command, userID, channe
 }
 
 // TrackControllerReconcile tracks a controller reconciliation with both metrics and tracing
-func (m *Monitor) TrackControllerReconcile(ctx context.Context, controller string, fn func(context.Context) error) error {
+func (m *Monitor) TrackControllerReconcile(
+	ctx context.Context,
+	controller string,
+	fn func(context.Context) error,
+) error {
 	start := time.Now()
 
 	// Add tracing

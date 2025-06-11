@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"github.com/rebelopsio/jit-bot/pkg/auth"
 	"github.com/rebelopsio/jit-bot/pkg/models"
 	"github.com/rebelopsio/jit-bot/pkg/store"
@@ -82,7 +83,10 @@ func (h *CommandHandler) HandleJITCommand(w http.ResponseWriter, r *http.Request
 
 func (h *CommandHandler) handleRequestAccess(w http.ResponseWriter, cmd SlackCommand, args []string) {
 	if len(args) < 2 {
-		h.sendError(w, "Usage: `/jit request <cluster> <reason>` - Example: `/jit request prod-cluster debugging issue #1234`")
+		h.sendError(
+			w,
+			"Usage: `/jit request <cluster> <reason>` - Example: `/jit request prod-cluster debugging issue #1234`",
+		)
 		return
 	}
 
@@ -111,7 +115,7 @@ func (h *CommandHandler) handleRequestAccess(w http.ResponseWriter, cmd SlackCom
 		RequestedAt: time.Now(),
 	}
 
-	if err := h.store.CreateAccess(access); err != nil {
+	if createErr := h.store.CreateAccess(access); createErr != nil {
 		h.sendError(w, "Failed to create access request")
 		return
 	}
@@ -134,12 +138,12 @@ func (h *CommandHandler) handleRequestAccess(w http.ResponseWriter, cmd SlackCom
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
+	if encodeErr := json.NewEncoder(w).Encode(response); encodeErr != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
 }
 
-func (h *CommandHandler) handleListClusters(w http.ResponseWriter, cmd SlackCommand) {
+func (h *CommandHandler) handleListClusters(w http.ResponseWriter, _ SlackCommand) {
 	clusters, err := h.store.ListClusters()
 	if err != nil {
 		h.sendError(w, "Failed to retrieve clusters")
@@ -179,7 +183,7 @@ func (h *CommandHandler) handleListClusters(w http.ResponseWriter, cmd SlackComm
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
+	if encodeErr := json.NewEncoder(w).Encode(response); encodeErr != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
 }
@@ -235,7 +239,7 @@ func (h *CommandHandler) handleStatus(w http.ResponseWriter, cmd SlackCommand) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
+	if encodeErr := json.NewEncoder(w).Encode(response); encodeErr != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
 }
@@ -284,7 +288,7 @@ func (h *CommandHandler) sendMessage(w http.ResponseWriter, text string) {
 		"text":          text,
 	}
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
+	if encodeErr := json.NewEncoder(w).Encode(response); encodeErr != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
 }
@@ -295,7 +299,7 @@ func (h *CommandHandler) sendError(w http.ResponseWriter, text string) {
 		"text":          "❌ " + text,
 	}
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
+	if encodeErr := json.NewEncoder(w).Encode(response); encodeErr != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
 }

@@ -442,25 +442,121 @@ aws eks delete-access-entry \
   --principal-arn arn:aws:iam::ACCOUNT-ID:role/JITAccessRole-ReadOnly
 ```
 
-## 7. Security Best Practices
+## 7. Enhanced AWS Integration Features
 
-### 7.1 Least Privilege Access
+The JIT Bot now includes enhanced AWS integration capabilities that provide direct access management without requiring Kubernetes operator intervention.
+
+### 7.1 Direct AWS API Integration
+
+The system now provides:
+
+- **Immediate Access Granting**: Direct STS and EKS API calls for faster access provisioning
+- **Temporary Credential Generation**: Creates time-limited AWS credentials embedded in kubeconfig
+- **Automatic Access Entry Management**: Creates, monitors, and cleans up EKS access entries with proper tagging
+- **RESTful API**: Complete HTTP API for programmatic access management
+
+### 7.2 Permission Mapping
+
+The system maps requested permissions to AWS managed EKS policies:
+
+| Permission | AWS Policy | Scope Options |
+|------------|------------|---------------|
+| `view` | `AmazonEKSViewPolicy` | Namespace or Cluster |
+| `edit` | `AmazonEKSEditPolicy` | Namespace or Cluster |
+| `admin` | `AmazonEKSClusterAdminPolicy` | Cluster only |
+| `cluster-admin` | `AmazonEKSClusterAdminPolicy` | Cluster only |
+| `debug`, `logs`, `exec`, `port-forward` | `AmazonEKSEditPolicy` | Namespace or Cluster |
+
+### 7.3 Access Entry Tagging
+
+All JIT-created access entries are tagged for identification and cleanup:
+
+```json
+{
+  "Purpose": "JITAccess",
+  "CreatedBy": "jit-server",
+  "Temporary": "true", 
+  "CreatedAt": "2025-06-11T14:00:00Z",
+  "ExpiresAfter": "8h"
+}
+```
+
+### 7.4 KubeConfig Generation
+
+The system automatically generates kubectl configuration with:
+
+- **Embedded AWS credentials**: Temporary STS credentials included
+- **AWS CLI integration**: Uses `aws eks get-token` for seamless authentication
+- **Automatic expiration**: Credentials expire with the access grant
+- **Ready-to-use**: No additional configuration required
+
+### 7.5 REST API Endpoints
+
+New endpoints for direct access management:
+
+- `POST /api/v1/access/grant` - Grant immediate JIT access
+- `POST /api/v1/access/revoke` - Revoke active access
+- `GET /api/v1/access` - List access records with filtering
+- `GET /api/v1/access/status` - Get specific access status
+- `POST /api/v1/access/cleanup` - Clean up expired access (admin only)
+
+### 7.6 AWS Infrastructure Requirements
+
+Additional permissions required for enhanced integration:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "eks:CreateAccessEntry",
+        "eks:DeleteAccessEntry", 
+        "eks:DescribeAccessEntry",
+        "eks:ListAccessEntries",
+        "eks:AssociateAccessPolicy",
+        "eks:DisassociateAccessPolicy",
+        "eks:DescribeCluster"
+      ],
+      "Resource": [
+        "arn:aws:eks:*:*:cluster/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "sts:AssumeRole",
+        "sts:GetCallerIdentity"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+## 8. Security Best Practices
+
+### 8.1 Least Privilege Access
 
 - Create specific roles for different access levels (read-only, developer, admin)
 - Use namespace-scoped access where possible
 - Regularly review and rotate credentials
+- Implement automatic cleanup of expired access entries
 
-### 7.2 Monitoring and Alerting
+### 8.2 Monitoring and Alerting
 
 - Set up CloudWatch alarms for unusual STS activity
 - Monitor EKS access entry creation/deletion
 - Alert on failed authentication attempts
+- Track JIT access patterns and anomalies
 
-### 7.3 Compliance
+### 8.3 Compliance
 
 - Ensure CloudTrail logging is enabled and monitored
 - Implement data retention policies
 - Regular access reviews and audits
+- Tag all JIT resources for compliance tracking
 
 ## 8. Troubleshooting
 

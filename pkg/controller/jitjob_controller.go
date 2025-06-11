@@ -293,7 +293,9 @@ func (r *JITAccessJobReconciler) handleCompletedJob(ctx context.Context, job *JI
 	return ctrl.Result{}, nil
 }
 
-func (r *JITAccessJobReconciler) createCredentialsSecret(job *JITAccessJob, creds *kubernetes.AccessCredentials) (*corev1.Secret, error) {
+func (r *JITAccessJobReconciler) createCredentialsSecret(
+	job *JITAccessJob, creds *kubernetes.AccessCredentials,
+) (*corev1.Secret, error) {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("jit-credentials-%s", job.Name),
@@ -305,7 +307,7 @@ func (r *JITAccessJobReconciler) createCredentialsSecret(job *JITAccessJob, cred
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
-			"aws-access-key-id":     []byte(creds.TemporaryCredentials.AccessKeyId),
+			"aws-access-key-id":     []byte(creds.TemporaryCredentials.AccessKeyID),
 			"aws-secret-access-key": []byte(creds.TemporaryCredentials.SecretAccessKey),
 			"aws-session-token":     []byte(creds.TemporaryCredentials.SessionToken),
 			"expires-at":            []byte(creds.ExpiresAt.Format(time.RFC3339)),

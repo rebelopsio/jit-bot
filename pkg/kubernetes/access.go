@@ -10,6 +10,7 @@ import (
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 	ekstypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	ststypes "github.com/aws/aws-sdk-go-v2/service/sts/types"
+
 	"github.com/rebelopsio/jit-bot/pkg/aws"
 	"github.com/rebelopsio/jit-bot/pkg/models"
 )
@@ -112,7 +113,9 @@ func (am *AccessManager) GrantAccess(ctx context.Context, req GrantAccessRequest
 	}, nil
 }
 
-func (am *AccessManager) RevokeAccess(ctx context.Context, clusterAccess *models.ClusterAccess, cluster *models.Cluster, jitRoleArn string) error {
+func (am *AccessManager) RevokeAccess(
+	ctx context.Context, clusterAccess *models.ClusterAccess, cluster *models.Cluster, jitRoleArn string,
+) error {
 	// Calculate the principal ARN that was created during access grant
 	sessionName := aws.GenerateJITSessionName(clusterAccess.UserID, cluster.ID)
 	principalArn := fmt.Sprintf("arn:aws:sts::%s:assumed-role/%s/%s",
@@ -209,7 +212,7 @@ users:
           value: %s
         - name: AWS_SESSION_TOKEN
           value: %s
-`, ca, endpoint, clusterName, clusterName, clusterName, clusterName, clusterName, clusterName, clusterName, region, creds.AccessKeyId, creds.SecretAccessKey, creds.SessionToken)
+`, ca, endpoint, clusterName, clusterName, clusterName, clusterName, clusterName, clusterName, clusterName, region, creds.AccessKeyID, creds.SecretAccessKey, creds.SessionToken)
 
 	return kubeConfig
 }
