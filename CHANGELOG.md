@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/rebelopsio/jit-bot/compare/v1.0.1...v1.0.2) (2025-06-12)
+
+
+### Bug Fixes
+
+* delete file ([53ff8e0](https://github.com/rebelopsio/jit-bot/commit/53ff8e0df0c7d9efe1966512dd6225f827de8fe5))
+
 ## [1.0.1](https://github.com/rebelopsio/jit-bot/compare/v1.0.0...v1.0.1) (2025-06-11)
 
 
